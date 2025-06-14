@@ -1,0 +1,95 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  OWNER
+  EMPLOYEE
+}
+
+model User {
+  id           Int       @id @default(autoincrement())
+  idNumber     String
+  name         String
+  email        String    @unique
+  contact      String
+  address      String
+  password     String
+  username     String    @unique
+  role         UserRole
+  isDeleted Boolean?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model Customer {
+  id          Int       @id @default(autoincrement())
+  name        String
+  company     String
+  address     String
+  contact     String
+  updatedOn   DateTime
+  isDeleted Boolean?
+  sales       Sale[]
+}
+
+model Product {
+  id             String    @id
+  name           String
+  brand          String
+  size           String
+  category       String
+  quantity       Int
+  remainingStock Int?
+  buyingPrice    Float
+  sellingPrice   Float
+  source         String?
+  isDeleted Boolean?
+  isLowStock     Boolean?   @default(false)
+  saleItems      SaleItem[]
+}
+
+model Sale {
+  id           Int         @id @default(autoincrement())
+  invoice      Int         @unique
+  customer     Customer    @relation(fields: [customerId], references: [id])
+  customerId   Int
+  orderDate    DateTime
+  netTotal     Float
+  paid         Float
+  due          Float
+  status       SaleStatus
+  paymentType  PaymentType
+  updatedOn    DateTime
+  isDeleted Boolean?
+  saleItems    SaleItem[]
+}
+
+model SaleItem {
+  id         Int      @id @default(autoincrement())
+  sale       Sale     @relation(fields: [saleId], references: [id])
+  saleId     Int
+  product    Product  @relation(fields: [productId], references: [id])
+  productId  String
+  quantity   Int
+  price      Float
+  total      Float
+}
+
+enum SaleStatus {
+  Pending
+  Completed
+  Partial
+}
+
+enum PaymentType {
+  Cash
+  Gcash
+  BankTransfer
+}

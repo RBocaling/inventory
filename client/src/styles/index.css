@@ -1,0 +1,263 @@
+@import url("https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap");
+
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@theme {
+    --color-primary: #8A6761;
+    --color-dark: #0c0e12;
+    --color-light-dark: #151515;
+  }
+
+
+  /* .main::before{
+  content: "";
+  position: absolute;
+  top: 20%;
+  left:0%;
+  transform: translateX(-50%);
+  width: 500px;
+  height: 500px;
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse at center,
+    hsla(170, 92%, 76%, 0.3),
+    transparent 64%
+  );
+  z-index: -1;
+}
+
+
+
+.main::after{
+  content: "";
+  position: absolute;
+  top: -10%;
+  right: -10%;
+  transform: translateX(-50%);
+  width: 700px;
+  height: 700px;
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse at center,
+    hsla(7, 92%, 76%, 0.4),
+    transparent 64%
+  );
+  z-index: -1;
+} */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+@keyframes carMove {
+  0% { 
+    transform: translateX(-50px);
+    opacity: 0;
+  }
+  5% { 
+    opacity: 1;
+  }
+  95% { 
+    opacity: 1;
+  }
+  100% { 
+    transform: translateX(calc(100% + 400px));
+    opacity: 0;
+  }
+}
+
+@keyframes roadMove {
+  0% { 
+    transform: translateX(-100%);
+  }
+  100% { 
+    transform: translateX(100%);
+  }
+}
+
+@keyframes customPulse {
+  0%, 100% {
+    /* opacity: 1; */
+  }
+  100% {
+    /* opacity: .5; */
+  }
+}
+
+@keyframes customPing {
+  75%, 100% {
+    transform: scale(2);
+    /* opacity: 0; */
+  }
+}
+
+.animate-car {
+  animation: carMove 2s infinite linear;
+}
+
+.animate-road {
+  animation: roadMove 4s infinite linear;
+}
+
+.animate-custom-pulse {
+  animation: customPulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.animate-custom-ping {
+  animation: customPing 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+.delay-75 {
+  animation-delay: 75ms;
+}
+
+.delay-100 {
+  animation-delay: 100ms;
+}
+
+.delay-150 {
+  animation-delay: 150ms;
+}
+
+.delay-200 {
+  animation-delay: 200ms;
+}
+
+.delay-250 {
+  animation-delay: 250ms;
+}
+
+.delay-300 {
+  animation-delay: 300ms;
+}
+
+.delay-350 {
+  animation-delay: 350ms;
+}
+
+
+
+
+
+
+.loader {
+	height: 100vh;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.car__body {
+	animation: shake 0.2s ease-in-out infinite alternate;
+}
+
+.car__line {
+	transform-origin: center right;
+	stroke-dasharray: 22;
+	animation: line 0.8s ease-in-out infinite;
+	animation-fill-mode: both;
+}
+
+.car__line--top {
+	animation-delay: 0s;
+}
+
+.car__line--middle {
+	animation-delay: 0.2s;
+}
+
+.car__line--bottom {
+	animation-delay: 0.4s;
+}
+
+@keyframes shake {
+	0% {
+		transform: translateY(-1%);
+	}
+	100% {
+		transform: translateY(3%);
+	}
+}
+
+@keyframes line {
+	0% {
+		stroke-dashoffset: 22;
+	}
+	25% {
+		stroke-dashoffset: 22;
+	}
+	50% {
+		stroke-dashoffset: 0;
+	}
+	51% {
+		stroke-dashoffset: 0;
+	}
+	80% {
+		stroke-dashoffset: -22;
+	}
+	100% {
+		stroke-dashoffset: -22;
+	}
+}
