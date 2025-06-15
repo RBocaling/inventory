@@ -3,24 +3,41 @@ import Title from "@/components/title/title";
 import { useGetSaleList } from "@/hooks/useGetSale";
 import { useGetCustomerList } from "@/hooks/useGetCustomer";
 import { useGetProductList } from "@/hooks/useGetProduct";
+import Select from "react-select";
+import { useGetInfo } from "@/hooks/useGetInfo";
 
 const ProfitReport = () => {
   const { data: sales = [] } = useGetSaleList();
   const { data: customers = [] } = useGetCustomerList();
   const { data: products = [] } = useGetProductList();
-
+  const { data } = useGetInfo();
+  if (data?.role === "EMPLOYEE") {
+    return null;
+  }
   const [filters, setFilters] = useState({
     startDate: "",
     endDate: "",
-    product: "",
+    products: [] as string[],
     customerId: "",
   });
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
-  ) => {
+  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFilters((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleProductChange = (selected: any) => {
+    setFilters((prev) => ({
+      ...prev,
+      products: selected ? selected.map((s: any) => s.value) : [],
+    }));
+  };
+
+  const handleCustomerChange = (selected: any) => {
+    setFilters((prev) => ({
+      ...prev,
+      customerId: selected?.value || "",
+    }));
   };
 
   const filteredSales = useMemo(() => {
@@ -33,11 +50,14 @@ const ProfitReport = () => {
         (!start || saleDate >= start) && (!end || saleDate <= end);
 
       const matchesCustomer =
-        !filters.customerId || sale.customerId?.toString() === filters.customerId;
+        !filters.customerId ||
+        sale.customerId?.toString() === filters.customerId;
 
       const matchesProduct =
-        !filters.product ||
-        sale.saleItems?.some((item: any) => item.productId === filters.product);
+        filters.products.length === 0 ||
+        sale.saleItems?.some((item: any) =>
+          filters.products.includes(item.productId)
+        );
 
       return matchesDate && matchesCustomer && matchesProduct;
     });
@@ -62,6 +82,7 @@ const ProfitReport = () => {
         />
       </div>
 
+      {/* Filters */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-[#f3f3f3] p-4 rounded mb-5">
         <div>
           <label className="text-sm font-bold text-[#512E2E]">Start Date</label>
@@ -69,7 +90,7 @@ const ProfitReport = () => {
             type="date"
             name="startDate"
             value={filters.startDate}
-            onChange={handleChange}
+            onChange={handleDateChange}
             className="w-full border p-2 rounded bg-white"
           />
         </div>
@@ -79,44 +100,57 @@ const ProfitReport = () => {
             type="date"
             name="endDate"
             value={filters.endDate}
-            onChange={handleChange}
+            onChange={handleDateChange}
             className="w-full border p-2 rounded bg-white"
           />
         </div>
+
         <div>
-          <label className="text-sm font-bold text-[#512E2E]">Product</label>
-          <select
-            name="product"
-            value={filters.product}
-            onChange={handleChange}
-            className="w-full border p-2 rounded"
-          >
-            <option value="">--All--</option>
-            {products.map((p: any) => (
-              <option key={p.id} value={p.id}>
-                {p.name} ({p.id})
-              </option>
-            ))}
-          </select>
+          <label className="text-sm font-bold text-[#512E2E]">
+            Product (Multiple)
+          </label>
+          <Select
+            isMulti
+            isClearable
+            options={products.map((p: any) => ({
+              label: `${p.name} (${p.id})`,
+              value: p.id,
+            }))}
+            value={filters.products.map((id) => {
+              const prod = products.find((p: any) => p.id === id);
+              return { label: `${prod?.name} (${id})`, value: id };
+            })}
+            onChange={handleProductChange}
+            className="bg-white"
+          />
         </div>
+
         <div>
           <label className="text-sm font-bold text-[#512E2E]">Customer</label>
-          <select
-            name="customerId"
-            value={filters.customerId}
-            onChange={handleChange}
-            className="w-full border p-2 rounded"
-          >
-            <option value="">--All--</option>
-            {customers.map((c: any) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
+          <Select
+            isClearable
+            options={customers.map((c: any) => ({
+              label: c.name,
+              value: c.id.toString(),
+            }))}
+            value={
+              filters.customerId
+                ? {
+                    label:
+                      customers.find(
+                        (c: any) => c.id.toString() === filters.customerId
+                      )?.name || "",
+                    value: filters.customerId,
+                  }
+                : null
+            }
+            onChange={handleCustomerChange}
+            className="bg-white"
+          />
         </div>
       </div>
 
+      {/* Summary */}
       <div className="bg-[#f3f3f3] p-6 rounded text-sm font-bold text-[#512E2E] space-y-3">
         <p>
           Total Sale:{" "}

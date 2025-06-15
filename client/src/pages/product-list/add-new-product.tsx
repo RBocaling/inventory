@@ -3,7 +3,7 @@ import { useMutation } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 import Title from "@/components/title/title";
-import { addProductApi } from "@/api/productApi"; // <-- Make sure this exists
+import { addProductApi } from "@/api/productApi";
 
 const AddNewProduct = () => {
   const navigate = useNavigate();

@@ -12,7 +12,10 @@ import { formatPHP } from "@/lib/constants";
 const ProductList = () => {
   const [entriesToShow, setEntriesToShow] = useState(10);
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [sortConfig, setSortConfig] = useState({ key: "", direction: "asc" });
+  const [historyPage, setHistoryPage] = useState(1);
+  const itemsPerPage = 5;
 
   const { data: product } = useGetProductList();
   const queryClient = useQueryClient();
@@ -164,9 +167,21 @@ const ProductList = () => {
                   </th>
                   <th
                     className="text-left px-3 py-2 cursor-pointer"
+                    onClick={() => handleSort("quantity")}
+                  >
+                    Recently Added Stocks{renderSortArrow("quantity")}
+                  </th>
+                  <th
+                    className="text-left px-3 py-2 cursor-pointer"
                     onClick={() => handleSort("remainingStock")}
                   >
                     Remaining Stock{renderSortArrow("remainingStock")}
+                  </th>
+                  <th
+                    className="text-left px-3 py-2 cursor-pointer"
+                    onClick={() => handleSort("remainingStock")}
+                  >
+                    Total Sold Stocks{renderSortArrow("remainingStock")}
                   </th>
                   <th
                     className="text-left px-3 py-2 cursor-pointer"
@@ -218,16 +233,32 @@ const ProductList = () => {
                         {product.category}
                       </td>
                       <td className="text-base px-3 py-2">
-                        {product.quantity}
+                        <div className="flex items-center gap-2">
+                          {product.quantity}
+                          <button
+                            onClick={() => setSelectedProduct(product)}
+                            className="text-blue-500 underline cursor-pointer"
+                          >
+                            View
+                          </button>
+                        </div>
+                      </td>
+                      <td className="text-base px-3 py-2">
+                        {product.productHistory?.[
+                          product.productHistory.length - 1
+                        ]?.originalStockAdded ?? product.quantity}
                       </td>
                       <td className="text-base px-3 py-2">
                         {product.remainingStock}
                       </td>
                       <td className="text-base px-3 py-2">
+                        {product.quantity - product.remainingStock}
+                      </td>
+                      <td className="text-base px-3 py-2">
                         {formatPHP(Number(product.buyingPrice.toFixed(2)))}
                       </td>
                       <td className="text-base px-3 py-2">
-                         {formatPHP(Number(product.sellingPrice.toFixed(2)))}
+                        {formatPHP(Number(product.sellingPrice.toFixed(2)))}
                       </td>
                       <td className="text-base px-3 py-2">{product.source}</td>
                       <td className="px-3 py-2 flex items-center space-x-4">
@@ -280,6 +311,91 @@ const ProductList = () => {
           Add New Product
         </Link>
       </div>
+
+      {selectedProduct && (
+        <div className="h-screen fixed top-0 left-0 z-50 w-full bg-black/30 flex items-center justify-center">
+          <div className="max-w-2xl w-full bg-white rounded-3xl p-10 relative">
+            <button
+              onClick={() => {
+                setSelectedProduct(null);
+                setHistoryPage(1);
+              }}
+              className="text-red-500 text-3xl font-bold absolute top-5 right-5"
+            >
+              &times;
+            </button>
+            <h1 className="text-2xl font-bold mb-9">
+              Product History Information
+            </h1>
+            <table className="w-full">
+              <thead>
+                <tr className="border h-14">
+                  <th className="p-3 border">ID</th>
+                  <th className="p-3 border">Stock Added</th>
+                  <th className="p-3 border">Total Stock</th>
+                  <th className="p-3 border">Updated By</th>
+                  <th className="p-3 border">Updated On</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[...(selectedProduct?.productHistory || [])]
+                  .sort(
+                    (a, b) =>
+                      new Date(b.updatedOn).getTime() -
+                      new Date(a.updatedOn).getTime()
+                  )
+                  .slice(
+                    (historyPage - 1) * itemsPerPage,
+                    historyPage * itemsPerPage
+                  )
+                  .map((item: any, index: number) => (
+                    <tr key={item.id} className="border h-14">
+                      <td className="p-3 border text-xl text-gray-500 whitespace-nowrap">
+                        {item.id}
+                      </td>
+                      <td className="p-3 border text-xl text-gray-500 text-center">
+                        {item?.originalStockAdded}
+                      </td>
+                      <td className="p-3 border text-xl text-gray-500 text-center">
+                        {item?.quantity}
+                      </td>
+                      <td className="p-3 border text-xl text-gray-500">
+                        {item?.addedBy}
+                      </td>
+                      <td className="p-3 border text-xl text-gray-500">
+                        {new Date(item?.updatedOn).toLocaleString()}
+                      </td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+
+            {/* Pagination with Numbers */}
+            <div className="flex items-center justify-center mt-6 space-x-2">
+              {Array.from({
+                length: Math.ceil(
+                  (selectedProduct?.productHistory?.length || 0) / itemsPerPage
+                ),
+              }).map((_, pageIndex) => {
+                const page = pageIndex + 1;
+                return (
+                  <button
+                    key={page}
+                    onClick={() => setHistoryPage(page)}
+                    className={`px-3 py-1 border rounded ${
+                      page === historyPage
+                        ? "bg-[#6b4b47] text-white font-bold"
+                        : "bg-gray-100 hover:bg-gray-200"
+                    }`}
+                  >
+                    {page}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -69,6 +69,20 @@ const UpdateProduct = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
+    const newQuantity = parseInt(form.quantity);
+    const totalSold = product.quantity - product.remainingStock;
+
+    console.log("totalSold", totalSold);
+
+    if (newQuantity < totalSold) {
+      Swal.fire({
+        icon: "error",
+        title: "Invalid Quantity",
+        text: `You cannot set quantity below total sold (${totalSold}).`,
+      });
+      return;
+    }
+
     const payload = {
       name: form.name,
       brand: form.brand,
@@ -86,9 +100,8 @@ const UpdateProduct = () => {
     updateProductMutate.mutate({ id: form.id, ...payload });
   };
 
-  
-    console.log("productToUpdate", product);
-    
+  console.log("productToUpdate", product);
+
   return (
     <div className="w-full p-5 pb-40">
       <div className="w-full border-b mb-9 pb-3">
@@ -109,7 +122,7 @@ const UpdateProduct = () => {
               value={form.id}
               readOnly
               onChange={handleChange}
-              className="w-full border border-gray-400 bg-white p-2 rounded"
+              className="w-full border border-gray-400 bg-gray-300 p-2 rounded"
               required
             />
           </div>

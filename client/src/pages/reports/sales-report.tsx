@@ -5,6 +5,7 @@ import { useGetSaleList } from "@/hooks/useGetSale";
 import { useGetProductList } from "@/hooks/useGetProduct";
 import { useGetCustomerList } from "@/hooks/useGetCustomer";
 import { formatPHP } from "@/lib/constants";
+import Select from "react-select";
 
 export default function SalesReport() {
   const { data: sales = [] } = useGetSaleList();
@@ -14,10 +15,11 @@ export default function SalesReport() {
   const [filters, setFilters] = useState({
     startDate: "",
     endDate: "",
-    product: "",
+    product: [] as string[],
     customer: "",
     status: "",
   });
+
   const [searchTerm, setSearchTerm] = useState("");
   const [sortConfig, setSortConfig] = useState<{
     key: string;
@@ -25,12 +27,10 @@ export default function SalesReport() {
   }>({ key: "", direction: "asc" });
 
   const handleSort = (key: string) => {
-    setSortConfig((prev) => {
-      if (prev.key === key) {
-        return { key, direction: prev.direction === "asc" ? "desc" : "asc" };
-      }
-      return { key, direction: "asc" };
-    });
+    setSortConfig((prev) => ({
+      key,
+      direction: prev.key === key && prev.direction === "asc" ? "desc" : "asc",
+    }));
   };
 
   const renderSortArrow = (key: string) => {
@@ -47,7 +47,6 @@ export default function SalesReport() {
           return prod?.name || i.productId;
         })
         .join(", ");
-
       return {
         ...s,
         customerName: cust?.name || "Unknown",
@@ -67,18 +66,27 @@ export default function SalesReport() {
     new Set(salesWithNames.map((s: any) => s.customerName))
   );
 
+  const productOptions = uniqueProducts.map((p) => ({ value: p, label: p }));
+  const customerOptions = uniqueCustomers.map((c) => ({ value: c, label: c }));
+
   const filtered = useMemo(() => {
-    let result = salesWithNames.filter((s: any) => {
+    return salesWithNames.filter((s: any) => {
       const od = new Date(s.orderDate);
       const sd = filters.startDate ? new Date(filters.startDate) : null;
       const ed = filters.endDate ? new Date(filters.endDate) : null;
 
       if (sd && od < sd) return false;
       if (ed && od > ed) return false;
-      if (filters.product && !s.productNames.includes(filters.product))
+
+      if (
+        filters.product.length > 0 &&
+        !filters.product.some((p) => s.productNames.includes(p))
+      )
         return false;
+      
       if (filters.customer && s.customerName !== filters.customer) return false;
       if (filters.status && s.status !== filters.status) return false;
+
       if (
         searchTerm &&
         !s.customerName.toLowerCase().includes(searchTerm.toLowerCase())
@@ -87,31 +95,7 @@ export default function SalesReport() {
 
       return true;
     });
-
-    // Sorting
-    if (sortConfig.key) {
-      result.sort((a:any, b:any) => {
-        const aVal = a[sortConfig.key];
-        const bVal = b[sortConfig.key];
-
-        if (sortConfig.key.toLowerCase().includes("date")) {
-          return sortConfig.direction === "asc"
-            ? new Date(aVal).getTime() - new Date(bVal).getTime()
-            : new Date(bVal).getTime() - new Date(aVal).getTime();
-        }
-
-        if (typeof aVal === "string") {
-          return sortConfig.direction === "asc"
-            ? aVal.localeCompare(bVal)
-            : bVal.localeCompare(aVal);
-        }
-
-        return sortConfig.direction === "asc" ? aVal - bVal : bVal - aVal;
-      });
-    }
-
-    return result;
-  }, [salesWithNames, filters, searchTerm, sortConfig]);
+  }, [salesWithNames, filters, searchTerm]);
 
   return (
     <div className="w-full p-5 pb-40">
@@ -124,68 +108,88 @@ export default function SalesReport() {
 
       {/* Filters */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-100 p-4 rounded mb-5 border">
-        {[
-          { label: "Start Date", name: "startDate", type: "date" },
-          { label: "End Date", name: "endDate", type: "date" },
-          {
-            label: "Product",
-            name: "product",
-            type: "select",
-            options: ["", ...uniqueProducts],
-          },
-          {
-            label: "Customer",
-            name: "customer",
-            type: "select",
-            options: ["", ...uniqueCustomers],
-          },
-          {
-            label: "Payment Status",
-            name: "status",
-            type: "select",
-            options: ["", "Pending", "Partial", "Completed"],
-          },
-        ].map(({ label, name, type, options }) => (
-          <div key={name}>
-            <label className="text-sm font-bold text-[#512E2E] mb-1 block">
-              <span className="text-red-500">*</span> {label}
-            </label>
-            {type === "select" ? (
-              <select
-                name={name}
-                value={(filters as any)[name]}
-                onChange={(e) =>
-                  setFilters((prev) => ({ ...prev, [name]: e.target.value }))
-                }
-                className="w-full border p-2 rounded bg-white"
-              >
-                <option value="">--All--</option>
-                {options!.map((opt) => (
-                  <option key={opt} value={opt}>
-                    {opt}
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <input
-                type="date"
-                name={name}
-                value={(filters as any)[name]}
-                onChange={(e) =>
-                  setFilters((prev) => ({ ...prev, [name]: e.target.value }))
-                }
-                className="w-full border p-2 rounded bg-white"
-              />
+        <div>
+          <label className="text-sm font-bold text-[#512E2E] mb-1 block">
+            Start Date
+          </label>
+          <input
+            type="date"
+            className="w-full border p-2 rounded bg-white"
+            value={filters.startDate}
+            onChange={(e) =>
+              setFilters((prev) => ({ ...prev, startDate: e.target.value }))
+            }
+          />
+        </div>
+        <div>
+          <label className="text-sm font-bold text-[#512E2E] mb-1 block">
+            End Date
+          </label>
+          <input
+            type="date"
+            className="w-full border p-2 rounded bg-white"
+            value={filters.endDate}
+            onChange={(e) =>
+              setFilters((prev) => ({ ...prev, endDate: e.target.value }))
+            }
+          />
+        </div>
+        <div>
+          <label className="text-sm font-bold text-[#512E2E] mb-1 block">
+            Products (Multi)
+          </label>
+          <Select
+            isMulti
+            options={productOptions}
+            value={productOptions.filter((opt: any) =>
+              filters.product.includes(opt.value)
             )}
-          </div>
-        ))}
-      </div>
-
-      {/* Search */}
-      <div className="mb-6 flex justify-start">
-        <button className="bg-[#6b4b47] text-white px-6 py-2 rounded hover:bg-[#593b37]">
-          Search
-        </button>
+            onChange={(selected) =>
+              setFilters((prev: any) => ({
+                ...prev,
+                product: selected.map((s) => s.value),
+              }))
+            }
+          />
+        </div>
+        <div>
+          <label className="text-sm font-bold text-[#512E2E] mb-1 block">
+            Customer
+          </label>
+          <Select
+            options={[{ value: "", label: "--All--" }, ...customerOptions]}
+            value={
+              customerOptions.find((opt) => opt.value === filters.customer) || {
+                value: "",
+                label: "--All--",
+              }
+            }
+            onChange={(selected) =>
+              setFilters((prev: any) => ({
+                ...prev,
+                customer: selected?.value || "",
+              }))
+            }
+            isClearable
+          />
+        </div>
+        <div>
+          <label className="text-sm font-bold text-[#512E2E] mb-1 block">
+            Payment Status
+          </label>
+          <select
+            className="w-full border p-2 rounded bg-white"
+            value={filters.status}
+            onChange={(e) =>
+              setFilters((prev) => ({ ...prev, status: e.target.value }))
+            }
+          >
+            <option value="">--All--</option>
+            <option value="Pending">Pending</option>
+            <option value="Partial">Partial</option>
+            <option value="Completed">Completed</option>
+          </select>
+        </div>
       </div>
 
       {/* Table */}
@@ -206,54 +210,27 @@ export default function SalesReport() {
         <table className="w-full table-auto text-sm">
           <thead className="bg-[#f3f3f3] text-[#512E2E] font-semibold">
             <tr>
-              <th
-                className="text-left px-3 py-2 cursor-pointer"
-                onClick={() => handleSort("invoice")}
-              >
-                Invoice{renderSortArrow("invoice")}
-              </th>
-              <th
-                className="text-left px-3 py-2 cursor-pointer"
-                onClick={() => handleSort("customerName")}
-              >
-                Customer Name{renderSortArrow("customerName")}
-              </th>
-              <th
-                className="text-left px-3 py-2 cursor-pointer"
-                onClick={() => handleSort("orderDate")}
-              >
-                Order Date{renderSortArrow("orderDate")}
-              </th>
-              <th
-                className="text-left px-3 py-2 cursor-pointer"
-                onClick={() => handleSort("invoiceTotal")}
-              >
-                Invoice Total{renderSortArrow("invoiceTotal")}
-              </th>
-              <th
-                className="text-left px-3 py-2 cursor-pointer"
-                onClick={() => handleSort("dueAmount")}
-              >
-                Due Amount{renderSortArrow("dueAmount")}
-              </th>
-              <th
-                className="text-left px-3 py-2 cursor-pointer"
-                onClick={() => handleSort("status")}
-              >
-                Status{renderSortArrow("status")}
-              </th>
-              <th
-                className="text-left px-3 py-2 cursor-pointer"
-                onClick={() => handleSort("paymentType")}
-              >
-                Payment Type{renderSortArrow("paymentType")}
-              </th>
-              <th
-                className="text-left px-3 py-2 cursor-pointer"
-                onClick={() => handleSort("updatedOn")}
-              >
-                Updated On{renderSortArrow("updatedOn")}
-              </th>
+              {[
+                "invoice",
+                "customerName",
+                "orderDateStr",
+                "invoiceTotal",
+                "dueAmount",
+                "status",
+                "paymentType",
+                "updatedOnStr",
+              ].map((key) => (
+                <th
+                  key={key}
+                  className="text-left px-3 py-2 cursor-pointer"
+                  onClick={() => handleSort(key)}
+                >
+                  {key
+                    .replace(/([A-Z])/g, " $1")
+                    .replace(/^\w/, (c) => c.toUpperCase())}
+                  {renderSortArrow(key)}
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody>
@@ -269,12 +246,8 @@ export default function SalesReport() {
                   <td className="px-3 py-2">{entry.invoice}</td>
                   <td className="px-3 py-2">{entry.customerName}</td>
                   <td className="px-3 py-2">{entry.orderDateStr}</td>
-                  <td className="px-3 py-2">
-                    {formatPHP(Number(entry.invoiceTotal.toFixed(2)))}
-                  </td>
-                  <td className="px-3 py-2">
-                     {formatPHP(Number(entry.dueAmount.toFixed(2)))}
-                  </td>
+                  <td className="px-3 py-2">{formatPHP(entry.invoiceTotal)}</td>
+                  <td className="px-3 py-2">{formatPHP(entry.dueAmount)}</td>
                   <td className="px-3 py-2">{entry.status}</td>
                   <td className="px-3 py-2">{entry.paymentType}</td>
                   <td className="px-3 py-2">{entry.updatedOnStr}</td>
@@ -283,12 +256,6 @@ export default function SalesReport() {
             )}
           </tbody>
         </table>
-
-        <div className="mt-4 flex justify-between items-center">
-          <div className="text-sm">
-            Showing {filtered.length} of {salesWithNames.length} entries
-          </div>
-        </div>
       </div>
     </div>
   );

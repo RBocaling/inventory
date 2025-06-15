@@ -43,14 +43,22 @@ export const getSaleById = async (req: Request, res: Response) => {
         id,
         isDeleted: false,
       },
-      include: { customer: true, saleItems: true },
+      include: {
+        customer: true,
+        saleItems: true,
+      },
     });
 
-    if (!result) return res.status(404).json({ message: "Sale not found" });
+    if (!result) {
+      return res.status(404).json({ message: "Sale not found" });
+    }
+
+    const remainingBalance = result.netTotal - result.paid;
 
     res.status(200).json({
       ...result,
       customer: result.customer?.name,
+      remainingBalance,
     });
   } catch (error) {
     res.status(500).json({ message: "Error fetching Sale", error });
@@ -73,8 +81,9 @@ export const updateSale = async (req: Request, res: Response) => {
         status: req.body.status,
         paymentType: req.body.paymentType,
         updatedOn: req.body.updatedOn,
-        isDeleted: req.body.isDeleted, 
+        isDeleted: req.body.isDeleted,
         saleItems: req.body.saleItems,
+        referenceNumber: req.body.referenceNumber,
       },
       include: { saleItems: true },
     });

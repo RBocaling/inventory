@@ -3,7 +3,7 @@ import { useMutation } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 import Title from "@/components/title/title";
-import { addCustomerApi } from "@/api/customerApi"; // You must create this API
+import { addCustomerApi } from "@/api/customerApi";
 
 const AddNewCustomer = () => {
   const navigate = useNavigate();
@@ -13,9 +13,6 @@ const AddNewCustomer = () => {
     company: "",
     address: "",
     contact: "",
-    // totalSales: 0,
-    // totalPaid: 0,
-    // totalDue: 0,
   });
 
   const mutation = useMutation({
@@ -27,7 +24,6 @@ const AddNewCustomer = () => {
         text: "The customer was successfully added!",
       });
       navigate("/customer-list");
-
     },
     onError: () => {
       Swal.fire({

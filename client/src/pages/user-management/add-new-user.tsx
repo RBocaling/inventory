@@ -1,5 +1,6 @@
 import { registerApi } from "@/api/authApi";
 import Title from "@/components/title/title";
+import { useGetInfo } from "@/hooks/useGetInfo";
 import { useMutation } from "@tanstack/react-query";
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
@@ -7,6 +8,7 @@ import Swal from "sweetalert2";
 
 const AddNewUser = () => {
   const navigate = useNavigate();
+  const { data } = useGetInfo();
 
   const [form, setForm] = useState({
     username: "",
@@ -23,34 +25,36 @@ const AddNewUser = () => {
     mutationFn: registerApi,
     onSuccess: () => {
       Swal.fire({
-              icon: "success",
-              title: "User Added",
-              text: "The user was successfully added!",
-            });
-      navigate("/login");
+        icon: "success",
+        title: "User Added",
+        text: "The user was successfully added!",
+      });
+      navigate("/user-management");
     },
     onError: () => {
       Swal.fire({
-              icon: "error",
-              title: "Failed",
-              text: "Could not add user. Please try again.",
-            });
-    }
+        icon: "error",
+        title: "Failed",
+        text: "Could not add user. Please try again.",
+      });
+    },
   });
 
-  const handleChange = (e:any) => {
+  const handleChange = (e: any) => {
     const { name, value } = e.target;
     setForm({ ...form, [name]: value });
-    };
-    
-  
+  };
+
   const handleSubmit = () => {
     registerMutation.mutate(form);
-  }
+  };
 
-  console.log("tets",form);
-  
-    
+  if (data.role !== "ADMIN") {
+    navigate("/user-management");
+  }
+  if (data.role !== "ADMIN") {
+    return null;
+  }
 
   return (
     <div className="w-full p-5 pb-40">

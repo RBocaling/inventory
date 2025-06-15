@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
+import Select from "react-select";
 import { FaTimes } from "react-icons/fa";
 import { Link, useNavigate } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
@@ -7,6 +8,8 @@ import Title from "@/components/title/title";
 import { addSaleApi } from "@/api/saleApi";
 import { useGetCustomerList } from "@/hooks/useGetCustomer";
 import { useGetProductList } from "@/hooks/useGetProduct";
+import { formatPHP } from "@/lib/constants";
+import { format } from "date-fns";
 
 type SalesItem = {
   product: string;
@@ -15,18 +18,18 @@ type SalesItem = {
   orderQuantity: string;
   totalPrice: string;
 };
-
 const AddNewSales = () => {
-   const { data: customers = [] } = useGetCustomerList();
-  const { data: products } = useGetProductList();
+  const { data: customers = [] } = useGetCustomerList();
+  const { data: products = [] } = useGetProductList();
   const navigate = useNavigate();
 
   const [customerInfo, setCustomerInfo] = useState({
     customerName: "",
-    orderDate: "",
+    orderDate: format(new Date(), "yyyy-dd-MM"),
     prevDue: "",
     paidAmount: "",
     paymentMethod: "Gcash",
+    referenceNumber: "",
   });
 
   const [items, setItems] = useState<SalesItem[]>([
@@ -39,24 +42,61 @@ const AddNewSales = () => {
     },
   ]);
 
-  const handleCustomerChange = (
+  const [errors, setErrors] = useState<{ [key: number]: string }>({});
+
+  const handleCustomerChange = (selected: any) => {
+    setCustomerInfo((prev) => ({
+      ...prev,
+      customerName: selected?.value || "",
+    }));
+  };
+
+  const handleCustomerInput = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
     setCustomerInfo((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleItemChange = (
-    index: number,
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
-  ) => {
-    const { name, value } = e.target;
+  const handleProductChange = (selected: any, index: number) => {
+    const selectedProduct = products.find((p: any) => p.id === selected?.value);
     const updatedItems = [...items];
-    updatedItems[index][name as keyof SalesItem] = value;
 
-    const price = parseFloat(updatedItems[index].price || "0");
-    const qty = parseFloat(updatedItems[index].orderQuantity || "0");
-    updatedItems[index].totalPrice = (price * qty).toFixed(2);
+    updatedItems[index] = {
+      product: selected?.value || "",
+      totalQuantity: selectedProduct?.remainingStock?.toString() || "0",
+      price: selectedProduct?.sellingPrice?.toString() || "0",
+      orderQuantity: "",
+      totalPrice: "",
+    };
+
+    setItems(updatedItems);
+    setErrors((prev) => ({ ...prev, [index]: "" }));
+  };
+
+  const handleOrderQtyChange = (
+    index: number,
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const value = e.target.value;
+    const updatedItems = [...items];
+    const maxStock = parseFloat(updatedItems[index].totalQuantity || "0");
+    const qty = parseFloat(value || "0");
+
+    if (qty > maxStock) {
+      setErrors((prev) => ({
+        ...prev,
+        [index]: `Only ${maxStock} in stock.`,
+      }));
+      updatedItems[index].orderQuantity = value;
+      updatedItems[index].totalPrice = "0";
+    } else {
+      setErrors((prev) => ({ ...prev, [index]: "" }));
+      updatedItems[index].orderQuantity = value;
+      updatedItems[index].totalPrice = (
+        parseFloat(updatedItems[index].price || "0") * qty
+      ).toFixed(2);
+    }
 
     setItems(updatedItems);
   };
@@ -70,19 +110,24 @@ const AddNewSales = () => {
         price: "",
         orderQuantity: "",
         totalPrice: "",
+        referenceNumber: "",
       },
     ]);
   };
 
   const removeItem = (index: number) => {
     setItems((prev) => prev.filter((_, i) => i !== index));
+    setErrors((prev) => {
+      const newErr = { ...prev };
+      delete newErr[index];
+      return newErr;
+    });
   };
 
   const subtotal = items.reduce(
     (sum, item) => sum + parseFloat(item.totalPrice || "0"),
     0
   );
-
   const netTotal = subtotal + parseFloat(customerInfo.prevDue || "0");
   const dueAmount = netTotal - parseFloat(customerInfo.paidAmount || "0");
 
@@ -106,9 +151,19 @@ const AddNewSales = () => {
   });
 
   const handleSubmit = () => {
+    // Prevent submission if any errors exist
+    if (Object.values(errors).some((e) => e)) {
+      Swal.fire({
+        icon: "warning",
+        title: "Invalid Quantity",
+        text: "Check order quantity vs. stock.",
+      });
+      return;
+    }
+
     const payload = {
       invoice: Math.floor(10000 + Math.random() * 89999),
-      customerId: Number(customerInfo?.customerName),
+      customerId: Number(customerInfo.customerName),
       orderDate: new Date(customerInfo.orderDate).toISOString(),
       netTotal: parseFloat(netTotal.toFixed(2)),
       paid: parseFloat(customerInfo.paidAmount || "0"),
@@ -120,23 +175,45 @@ const AddNewSales = () => {
           ? "Pending"
           : "Partial",
       paymentType: customerInfo.paymentMethod,
+      referenceNumber: customerInfo.referenceNumber,
       updatedOn: new Date().toISOString(),
       saleItems: {
         create: items.map((item) => ({
-          productId: item.product || "UNKNOWN",
+          productId: item.product,
           quantity: parseFloat(item.orderQuantity || "0"),
           price: parseFloat(item.price || "0"),
           total: parseFloat(item.totalPrice || "0"),
         })),
       },
     };
-    
 
     mutation.mutate(payload);
   };
 
-    console.log("customerInfo", customerInfo);
-  
+  const customerOptions = customers.map((c: any) => ({
+    label: `${c.name} (${c.company})`,
+    value: c.id,
+  }));
+
+  const productOptions = products?.map((p: any) => ({
+    label: `${p.name} (${p.brand})`,
+    value: p.id,
+  }));
+
+  const selectRef = useRef(null);
+  const inputRef = useRef(null);
+  useEffect(() => {
+    (inputRef.current as any)?.focus();
+  }, []);
+
+  useEffect(() => {
+    if (selectRef.current) {
+      (selectRef.current as any).focus();
+    }
+  }, []);
+
+  console.log("customerInfo", customerInfo);
+
   return (
     <div className="w-full p-5 pb-40">
       <div className="w-full border-b mb-6 pb-3">
@@ -147,92 +224,91 @@ const AddNewSales = () => {
       </div>
 
       <div className="p-5 rounded space-y-4">
+        {/* Customer Info */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-[#EFEFEF] p-3">
           <div>
-            <label className="text-sm font-bold text-[#512E2E]">
+            <p className="text-sm font-bold text-[#512E2E] mb-1">
               Customer Name
-            </label>
-            <select
-              name="customerName"
-              value={customerInfo?.customerName}
+            </p>
+            <Select
+              ref={selectRef}
+              options={customerOptions}
               onChange={handleCustomerChange}
-              className="w-full border p-2 rounded bg-white"
-            >
-              <option value="">Select Customer</option>
-              {customers?.map((c: any) => (
-                <option key={c.id} value={c.id}>
-                  {c.name} ({c.company})
-                </option>
-              ))}
-            </select>
+              placeholder="Select Customer"
+            />
           </div>
           <div>
-            <label className="text-sm font-bold text-[#512E2E]">
-              Order Date
-            </label>
-            <input
-              type="date"
-              name="orderDate"
-              value={customerInfo.orderDate}
-              onChange={handleCustomerChange}
-              className="w-full border p-2 rounded bg-white"
-            />
+            <p className="text-sm font-bold text-[#512E2E] mb-1">Order Date</p>
+            <div className="relative bg-red-500">
+              <input
+                type="date"
+                name="orderDate"
+                value={customerInfo.orderDate}
+                onChange={handleCustomerInput}
+                className="w-full border p-2 rounded bg-white"
+              />
+            </div>
           </div>
         </div>
 
+        {/* Items List */}
         <div className="bg-[#EFEFEF] p-3 space-y-4">
-          {items?.map((item, index) => (
+          {items.map((item, index) => (
             <div
               key={index}
               className="grid grid-cols-1 md:grid-cols-7 gap-3 items-center"
             >
               <div className="md:col-span-2">
-                <label className="font-bold text-sm text-[#512E2E]">
-                  Product
-                </label>
-                <select
-                  name="product"
-                  value={item.product}
-                  onChange={(e) => handleItemChange(index, e)}
-                  className="w-full border p-2 rounded border-gray-400 bg-white"
-                >
-                  <option value="">Select Product</option>
-                  {products?.map((p:any) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name} ({p.brand})
-                    </option>
-                  ))}
-                </select>
+                <p className="font-bold text-sm text-[#512E2E]">Product</p>
+                <Select
+                  options={productOptions}
+                  onChange={(selected) => handleProductChange(selected, index)}
+                  placeholder="Select Product"
+                />
               </div>
-              <input
-                name="totalQuantity"
-                type="number"
-                placeholder="Total Quantity"
-                value={item.totalQuantity}
-                onChange={(e) => handleItemChange(index, e)}
-                className="border p-2 md:mt-6 rounded border-gray-400 bg-white"
-              />
-              <input
-                name="price"
-                type="number"
-                placeholder="Price"
-                value={item.price}
-                onChange={(e) => handleItemChange(index, e)}
-                className="border p-2 md:mt-6 rounded border-gray-400 bg-white"
-              />
-              <input
-                name="orderQuantity"
-                type="number"
-                placeholder="Order Qty"
-                value={item.orderQuantity}
-                onChange={(e) => handleItemChange(index, e)}
-                className="border p-2 md:mt-6 rounded border-gray-400 bg-white"
-              />
-              <input
-                readOnly
-                value={item.totalPrice}
-                className="border p-2 md:mt-6 rounded bg-white"
-              />
+              <div>
+                <p className="text-sm">Stock</p>
+                <input
+                  readOnly
+                  value={item.totalQuantity}
+                  className="border p-2 rounded bg-gray-100"
+                />
+              </div>
+              <div>
+                <p className="text-sm">Price</p>
+                <input
+                  readOnly
+                  value={formatPHP(Number(item.price))}
+                  className="border p-2 rounded bg-gray-100"
+                />
+              </div>
+              <div>
+                <p className="text-sm">Order Qty</p>
+                <input
+                  type="number"
+                  value={item.orderQuantity}
+                  onChange={(e) => handleOrderQtyChange(index, e)}
+                  className="border p-2 rounded bg-white w-full"
+                  ref={inputRef}
+                  min="1"
+                  onKeyDown={(e) => {
+                    if (e.key === "-" || e.key === "e" || e.key == "0") {
+                      e.preventDefault();
+                    }
+                  }}
+                />
+                {errors[index] && (
+                  <p className="text-xs text-red-600 mt-1">{errors[index]}</p>
+                )}
+              </div>
+              <div>
+                <p className="text-sm">Total</p>
+                <input
+                  readOnly
+                  value={formatPHP(Number(item.totalPrice))}
+                  className="border p-2 rounded bg-gray-100"
+                />
+              </div>
               <div className="flex items-center justify-center pt-6">
                 <button
                   type="button"
@@ -248,58 +324,101 @@ const AddNewSales = () => {
             <button
               type="button"
               onClick={addNewItem}
-              className="bg-[#6b4b47] text-white px-6 py-2 rounded hover:bg-[#593b37]"
+              disabled={items[items.length - 1]?.orderQuantity === ""}
+              className={`${
+                items[items.length - 1]?.orderQuantity === ""
+                  ? "bg-[#6b4b47]"
+                  : "bg-[#6b4b47]"
+              }  text-white px-6 py-2 rounded hover:bg-[#593b37]`}
             >
               Add New Item
             </button>
           </div>
         </div>
 
+        {/* Summary */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-[#EFEFEF] p-3">
-          <input
-            readOnly
-            value={subtotal.toFixed(2)}
-            className="border p-2 rounded bg-white"
-            placeholder="Subtotal"
-          />
-          <input
-            name="prevDue"
-            value={customerInfo.prevDue}
-            onChange={handleCustomerChange}
-            placeholder="Previous Due"
-            className="border p-2 rounded border-gray-400 bg-white"
-          />
-          <input
-            readOnly
-            value={netTotal.toFixed(2)}
-            className="border p-2 rounded bg-white"
-            placeholder="Net Total"
-          />
-          <input
-            name="paidAmount"
-            value={customerInfo.paidAmount}
-            onChange={handleCustomerChange}
-            placeholder="Paid Amount"
-            className="border p-2 rounded border-gray-400 bg-white"
-          />
-          <input
-            readOnly
-            value={dueAmount.toFixed(2)}
-            className="border p-2 rounded bg-white"
-            placeholder="Due Amount"
-          />
-          <select
-            name="paymentMethod"
-            value={customerInfo.paymentMethod}
-            onChange={handleCustomerChange}
-            className="border p-2 rounded border-gray-400 bg-white"
-          >
-            <option value="Gcash">Gcash</option>
-            <option value="Cash">Cash</option>
-            <option value="Bank Transfer">Bank Transfer</option>
-          </select>
+          <div className="w-full">
+            <p className="text-sm">Subtotal</p>
+            <input
+              readOnly
+              value={formatPHP(subtotal)}
+              className="border p-2 rounded bg-gray-100 w-full"
+            />
+          </div>
+          <div className="w-full">
+            <p className="text-sm">Previous Due</p>
+            <input
+              type="number"
+              name="prevDue"
+              value={customerInfo.prevDue}
+              onChange={handleCustomerInput}
+              className="border p-2 rounded bg-white w-full"
+              min="0"
+              onKeyDown={(e) => {
+                if (e.key === "-" || e.key === "e") {
+                  e.preventDefault();
+                }
+              }}
+            />
+          </div>
+          <div className="w-full">
+            <p className="text-sm">Net Total</p>
+            <input
+              readOnly
+              value={formatPHP(netTotal)}
+              className="border p-2 rounded bg-gray-100 w-full"
+            />
+          </div>
+          <div className="w-full">
+            <p className="text-sm">Paid Amount</p>
+            <input
+              type="number"
+              name="paidAmount"
+              value={customerInfo.paidAmount}
+              onChange={handleCustomerInput}
+              className="border p-2 rounded bg-white w-full"
+              min="0"
+              onKeyDown={(e) => {
+                if (e.key === "-" || e.key === "e") {
+                  e.preventDefault();
+                }
+              }}
+            />
+          </div>
+          <div className="w-full">
+            <p className="text-sm">Due Amount</p>
+            <input
+              readOnly
+              value={formatPHP(dueAmount)}
+              className="border p-2 rounded bg-gray-100 w-full"
+            />
+          </div>
+          <div className="w-full">
+            <p className="text-sm">Payment Method</p>
+            <select
+              name="paymentMethod"
+              value={customerInfo.paymentMethod}
+              onChange={handleCustomerInput}
+              className="border p-2 rounded bg-white w-full"
+            >
+              <option value="Gcash">Gcash</option>
+              <option value="Cash">Cash</option>
+              <option value="Bank Transfer">Bank Transfer</option>
+            </select>
+          </div>
+          <div className="w-full">
+            <p className="text-sm">Reference Number</p>
+            <input
+              name="referenceNumber"
+              value={customerInfo.referenceNumber ?? ""}
+              className="border p-2 rounded bg-white w-full"
+              onChange={handleCustomerInput}
+            />
+          </div>
         </div>
 
+        {/* Action Buttons */}
         <div className="flex justify-center space-x-4 mt-6">
           <button
             type="button"

@@ -141,7 +141,7 @@ const SalesEntryList = () => {
                     className="text-left px-3 py-2 cursor-pointer"
                     onClick={() => handleSort("invoice")}
                   >
-                    Invoice{renderSortArrow("invoice")}
+                    ID{renderSortArrow("invoice")}
                   </th>
                   <th
                     onClick={() => handleSort("customer")}
@@ -187,6 +187,12 @@ const SalesEntryList = () => {
                   </th>
                   <th
                     className="text-left px-3 py-2 cursor-pointer"
+                    onClick={() => handleSort("referenceNumber")}
+                  >
+                    reference Number{renderSortArrow("referenceNumber")}
+                  </th>
+                  <th
+                    className="text-left px-3 py-2 cursor-pointer"
                     onClick={() => handleSort("updatedOn")}
                   >
                     Updated On{renderSortArrow("updatedOn")}
@@ -195,45 +201,50 @@ const SalesEntryList = () => {
                 </tr>
               </thead>
               <tbody>
-                {sortedSales?.slice(0, entriesToShow).map((entry: any) => (
-                  <tr key={entry?.id} className="border-t">
-                    <td className="text-base px-3 py-2">{entry?.invoice}</td>
-                    <td className="text-base px-3 py-2">{entry?.customer}</td>
-                    <td className="text-base px-3 py-2">
-                      {new Date(entry?.orderDate).toLocaleDateString()}
-                    </td>
-                    <td className="text-base px-3 py-2">
-                      {formatPHP(Number(entry?.netTotal?.toFixed(2)))}
-                    </td>
-                    <td className="text-base px-3 py-2">
-                      {formatPHP(Number(entry?.paid?.toFixed(2)))}
-                    </td>
-                    <td className="text-base px-3 py-2">
-                       {formatPHP(Number(entry?.due?.toFixed(2)))}
-                    </td>
-                    <td className="text-base px-3 py-2">{entry?.status}</td>
-                    <td className="text-base px-3 py-2">
-                      {entry?.paymentType}
-                    </td>
-                    <td className="text-base px-3 py-2">
-                      {new Date(entry?.updatedOn).toLocaleString()}
-                    </td>
-                    <td className="px-3 py-2 flex items-center space-x-4">
-                      <Link
-                        to={`/sales-entry/update-sale/${entry?.id}`}
-                        className="text-blue-600 hover:text-blue-800"
-                      >
-                        <PiNotePencilBold size={20} />
-                      </Link>
-                      <button
-                        className="text-red-600 hover:text-red-800"
-                        onClick={() => handleDelete(entry?.id)}
-                      >
-                        <FaTrashCan size={20} />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {sortedSales
+                  ?.slice(0, entriesToShow)
+                  .map((entry: any, index) => (
+                    <tr key={entry?.id} className="border-t">
+                      <td className="text-base px-3 py-2">{index + 1}</td>
+                      <td className="text-base px-3 py-2">{entry?.customer}</td>
+                      <td className="text-base px-3 py-2">
+                        {new Date(entry?.orderDate).toLocaleDateString()}
+                      </td>
+                      <td className="text-base px-3 py-2">
+                        {formatPHP(Number(entry?.netTotal?.toFixed(2)))}
+                      </td>
+                      <td className="text-base px-3 py-2">
+                        {formatPHP(Number(entry?.paid?.toFixed(2)))}
+                      </td>
+                      <td className="text-base px-3 py-2">
+                        {formatPHP(Number(entry?.due?.toFixed(2)))}
+                      </td>
+                      <td className="text-base px-3 py-2">{entry?.status}</td>
+                      <td className="text-base px-3 py-2">
+                        {entry?.paymentType}
+                      </td>
+                      <td className="text-base px-3 py-2">
+                        {entry?.referenceNumber}
+                      </td>
+                      <td className="text-base px-3 py-2">
+                        {new Date(entry?.updatedOn).toLocaleString()}
+                      </td>
+                      <td className="px-3 py-2 flex items-center space-x-4">
+                        <Link
+                          to={`/sales-entry/update-sale/${entry?.id}`}
+                          className="text-blue-600 hover:text-blue-800"
+                        >
+                          <PiNotePencilBold size={20} />
+                        </Link>
+                        <button
+                          className="text-red-600 hover:text-red-800"
+                          onClick={() => handleDelete(entry?.id)}
+                        >
+                          <FaTrashCan size={20} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
               </tbody>
             </table>
 

@@ -4,7 +4,7 @@ import { FaTrashCan } from "react-icons/fa6";
 import { PiNotePencilBold } from "react-icons/pi";
 import { Link } from "react-router-dom";
 import Swal from "sweetalert2";
-import { useGetUserList } from "@/hooks/useGetInfo";
+import { useGetInfo, useGetUserList } from "@/hooks/useGetInfo";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { updateUserApi } from "@/api/authApi";
 
@@ -13,6 +13,7 @@ const UserManagement = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [sortConfig, setSortConfig] = useState({ key: "", direction: "asc" });
   const queryClient = useQueryClient();
+  const { data } = useGetInfo();
 
   const { data: users, isLoading } = useGetUserList();
 
@@ -92,6 +93,9 @@ const UserManagement = () => {
     }
   });
 
+  if (data?.role === "EMPLOYEE") {
+    return null;
+  }
   return (
     <div className="w-full p-5 pb-40">
       <div className="w-full border-b mb-5 pb-3">
@@ -172,7 +176,9 @@ const UserManagement = () => {
                     >
                       Address{renderSortArrow("address")}
                     </th>
-                    <th className="text-left px-3 py-2">Action</th>
+                    {data?.role === "ADMIN" && (
+                      <th className="text-left px-3 py-2">Action</th>
+                    )}
                   </tr>
                 </thead>
                 <tbody>
@@ -187,20 +193,22 @@ const UserManagement = () => {
                         <td className="text-base px-3 py-2">{user?.email}</td>
                         <td className="text-base px-3 py-2">{user?.contact}</td>
                         <td className="text-base px-3 py-2">{user?.address}</td>
-                        <td className="px-3 py-2 flex items-center space-x-4">
-                          <Link
-                            to={`/user-management/update-user/${user.id}`}
-                            className="text-blue-600 hover:text-blue-800"
-                          >
-                            <PiNotePencilBold size={20} />
-                          </Link>
-                          <button
-                            className="text-red-600 hover:text-red-800"
-                            onClick={() => handleDelete(user.id)}
-                          >
-                            <FaTrashCan size={20} />
-                          </button>
-                        </td>
+                        {data?.role === "ADMIN" && (
+                          <td className="px-3 py-2 flex items-center space-x-4">
+                            <Link
+                              to={`/user-management/update-user/${user.id}`}
+                              className="text-blue-600 hover:text-blue-800"
+                            >
+                              <PiNotePencilBold size={20} />
+                            </Link>
+                            <button
+                              className="text-red-600 hover:text-red-800"
+                              onClick={() => handleDelete(user.id)}
+                            >
+                              <FaTrashCan size={20} />
+                            </button>
+                          </td>
+                        )}
                       </tr>
                     ))}
                 </tbody>
@@ -225,12 +233,14 @@ const UserManagement = () => {
           entries
         </div>
 
-        <Link
-          to="/user-management/add-new-user"
-          className="bg-[#6b4b47] text-white px-4 py-2 rounded hover:bg-[#593b37]"
-        >
-          Add New User
-        </Link>
+        {data?.role === "ADMIN" && (
+          <Link
+            to="/user-management/add-new-user"
+            className="bg-[#6b4b47] text-white px-4 py-2 rounded hover:bg-[#593b37]"
+          >
+            Add New User
+          </Link>
+        )}
       </div>
     </div>
   );

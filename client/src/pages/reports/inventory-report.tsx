@@ -1,62 +1,57 @@
 import React, { useState, useMemo } from "react";
 import Title from "@/components/title/title";
 import { FaSearch } from "react-icons/fa";
+import Select from "react-select";
 import { useGetSaleList } from "@/hooks/useGetSale";
 import { useGetProductList } from "@/hooks/useGetProduct";
 import { useGetCustomerList } from "@/hooks/useGetCustomer";
-
-type InventoryEntry = {
-  invoice: string;
-  customerName: string;
-  orderDate: string;
-  itemsSold: number;
-  itemBreakdown: string[];
-  updatedOn: string;
-};
+import { useGetInfo } from "@/hooks/useGetInfo";
 
 export default function InventoryReport() {
   const { data: sales = [] } = useGetSaleList();
   const { data: products = [] } = useGetProductList();
   const { data: customers = [] } = useGetCustomerList();
-
+  const { data } = useGetInfo();
+  if (data?.role === "EMPLOYEE") {
+    return null;
+  }
   const [filters, setFilters] = useState({
     startDate: "",
     endDate: "",
-    product: "",
+    products: [] as string[],
     customer: "",
   });
   const [searchTerm, setSearchTerm] = useState("");
 
   const [sortConfig, setSortConfig] = useState<{
-    key: keyof InventoryEntry;
+    key: string;
     direction: "asc" | "desc";
   }>({
     key: "invoice",
     direction: "asc",
   });
 
-  const handleSort = (key: keyof InventoryEntry) => {
-    setSortConfig((prev) => {
-      if (prev.key === key) {
-        return { key, direction: prev.direction === "asc" ? "desc" : "asc" };
-      }
-      return { key, direction: "asc" };
-    });
+  const handleSort = (key: string) => {
+    setSortConfig((prev) => ({
+      key,
+      direction: prev.key === key && prev.direction === "asc" ? "desc" : "asc",
+    }));
   };
 
-  const renderSortArrow = (key: keyof InventoryEntry) => {
+  const renderSortArrow = (key: string) => {
     if (sortConfig.key !== key) return null;
     return sortConfig.direction === "asc" ? " ▲" : " ▼";
   };
 
-  const inventoryEntries: InventoryEntry[] = useMemo(() => {
+  const inventoryEntries = useMemo(() => {
     return sales.map((s: any) => {
       const cust = customers.find((c: any) => c.id === s.customerId);
       const breakdown = s.saleItems.map((i: any) => {
         const prod = products.find((p: any) => p.id === i.productId);
-        const name = prod?.id || i.productId;
+        const name = prod?.name || i.productId;
         return `${i.quantity} - ${name}`;
       });
+
       return {
         invoice: s.invoice.toString(),
         customerName: cust?.name || "Unknown",
@@ -71,70 +66,55 @@ export default function InventoryReport() {
     });
   }, [sales, products, customers]);
 
-  const uniqueProducts = Array.from(
-    new Set(
-      inventoryEntries.flatMap((i) =>
-        i.itemBreakdown.map((item) => item.split(" - ")[1])
-      )
-    )
-  ).filter((p) => p);
+  const uniqueProducts = Array.from(new Set(products.map((p: any) => p.name)));
+
   const uniqueCustomers = Array.from(
-    new Set(inventoryEntries.map((i) => i.customerName))
-  ).filter((c) => c);
+    new Set(customers.map((c: any) => c.name))
+  );
 
   const filtered = useMemo(() => {
-    let result = inventoryEntries.filter((entry) => {
+    return inventoryEntries.filter((entry: any) => {
       const od = new Date(entry.orderDate);
       const sd = filters.startDate ? new Date(filters.startDate) : null;
       const ed = filters.endDate ? new Date(filters.endDate) : null;
+
       if (sd && od < sd) return false;
       if (ed && od > ed) return false;
-      if (filters.customer && entry.customerName !== filters.customer)
-        return false;
+
       if (
-        filters.product &&
-        !entry.itemBreakdown.some((item) => item.endsWith(filters.product))
+        filters.products.length > 0 &&
+        !entry.itemBreakdown.some((item: any) =>
+          filters.products.some((p) => item.includes(p))
+        )
       )
         return false;
+
+      if (filters.customer && entry.customerName !== filters.customer)
+        return false;
+
       if (
         searchTerm &&
         !entry.customerName.toLowerCase().includes(searchTerm.toLowerCase())
       )
         return false;
+
       return true;
     });
+  }, [inventoryEntries, filters, searchTerm]);
 
-    // Apply sorting
-    if (sortConfig.key) {
-      result.sort((a, b) => {
-        const aVal = a[sortConfig.key];
-        const bVal = b[sortConfig.key];
-
-        if (sortConfig.key === "orderDate" || sortConfig.key === "updatedOn") {
-          return sortConfig.direction === "asc"
-            ? new Date(aVal).getTime() - new Date(bVal).getTime()
-            : new Date(bVal).getTime() - new Date(aVal).getTime();
-        }
-
-        if (typeof aVal === "string") {
-          return sortConfig.direction === "asc"
-            ? aVal.localeCompare(bVal)
-            : bVal.localeCompare(aVal);
-        }
-
-        if (typeof aVal === "number") {
-          return sortConfig.direction === "asc" ? aVal - bVal : bVal - aVal;
-        }
-
-        return 0;
-      });
-    }
-
-    return result;
-  }, [inventoryEntries, filters, searchTerm, sortConfig]);
-
-  const totalItemsSold = filtered.reduce((sum, cur) => sum + cur.itemsSold, 0);
-  const uniqueCustomerCount = new Set(filtered.map((i) => i.customerName)).size;
+  const totalItemsSold = filtered.reduce(
+    (sum: any, cur: any) => sum + cur.itemsSold,
+    0
+  );
+  const uniqueCustomerCount = new Set(filtered.map((i: any) => i.customerName))
+    .size;
+  const totalRemainingStock = products.reduce(
+    (sum: number, p: any) =>
+      filters.products.length === 0 || filters.products.includes(p.name)
+        ? sum + (p.remainingStock || 0)
+        : sum,
+    0
+  );
 
   return (
     <div className="w-full p-5 pb-40">
@@ -147,63 +127,64 @@ export default function InventoryReport() {
 
       {/* Filters */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-[#f3f3f3] p-4 rounded mb-5">
-        {[
-          { label: "Start Date", name: "startDate", type: "date" },
-          { label: "End Date", name: "endDate", type: "date" },
-          {
-            label: "Product",
-            name: "product",
-            type: "select",
-            options: ["", ...uniqueProducts],
-          },
-          {
-            label: "Customer",
-            name: "customer",
-            type: "select",
-            options: ["", ...uniqueCustomers],
-          },
-        ].map(({ label, name, type, options }) => (
-          <div key={name}>
-            <label className="text-sm font-bold text-[#512E2E] mb-1 block">
-              <span className="text-red-500">*</span> {label}
-            </label>
-            {type === "select" ? (
-              <select
-                name={name}
-                value={(filters as any)[name]}
-                onChange={(e) =>
-                  setFilters((prev) => ({ ...prev, [name]: e.target.value }))
-                }
-                className="w-full border p-2 rounded bg-white"
-              >
-                {options!.map((opt) => (
-                  <option key={opt} value={opt}>
-                    {opt || "--All--"}
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <input
-                type="date"
-                name={name}
-                value={(filters as any)[name]}
-                onChange={(e) =>
-                  setFilters((prev) => ({ ...prev, [name]: e.target.value }))
-                }
-                className="w-full border p-2 rounded bg-white"
-              />
-            )}
-          </div>
-        ))}
-      </div>
-
-      <div className="mb-6">
-        <button
-          onClick={() => {}}
-          className="bg-[#6b4b47] text-white px-6 py-2 rounded hover:bg-[#593b37]"
-        >
-          Search
-        </button>
+        <div>
+          <label className="text-sm font-bold block">Start Date</label>
+          <input
+            type="date"
+            value={filters.startDate}
+            onChange={(e) =>
+              setFilters((prev) => ({ ...prev, startDate: e.target.value }))
+            }
+            className="w-full border p-2 rounded bg-white"
+          />
+        </div>
+        <div>
+          <label className="text-sm font-bold block">End Date</label>
+          <input
+            type="date"
+            value={filters.endDate}
+            onChange={(e) =>
+              setFilters((prev) => ({ ...prev, endDate: e.target.value }))
+            }
+            className="w-full border p-2 rounded bg-white"
+          />
+        </div>
+        <div>
+          <label className="text-sm font-bold block">Product (Multiple)</label>
+          <Select
+            isMulti
+            options={uniqueProducts.map((p) => ({ label: p, value: p })) as any}
+            value={filters.products.map((p) => ({ label: p, value: p }))}
+            onChange={(selected) =>
+              setFilters((prev) => ({
+                ...prev,
+                products: selected.map((s) => s.value),
+              }))
+            }
+            className="bg-white"
+          />
+        </div>
+        <div>
+          <label className="text-sm font-bold block">Customer</label>
+          <Select
+            isClearable
+            options={
+              uniqueCustomers.map((c) => ({ label: c, value: c })) as any
+            }
+            value={
+              filters.customer
+                ? { label: filters.customer, value: filters.customer }
+                : null
+            }
+            onChange={(selected) =>
+              setFilters((prev) => ({
+                ...prev,
+                customer: selected?.value || "",
+              }))
+            }
+            className="bg-white"
+          />
+        </div>
       </div>
 
       {/* Summary */}
@@ -217,8 +198,8 @@ export default function InventoryReport() {
           <span className="font-bold">{totalItemsSold}</span>
         </p>
         <p>
-          Total Remaining Stock for selected products:{" "}
-          <span className="font-bold">{/* Add logic if needed */}</span>
+          Total Remaining Stock:{" "}
+          <span className="font-bold">{totalRemainingStock}</span>
         </p>
       </div>
 
@@ -281,7 +262,7 @@ export default function InventoryReport() {
                 </td>
               </tr>
             ) : (
-              filtered.map((entry, idx) => (
+              filtered.map((entry: any, idx: number) => (
                 <tr key={idx} className="border-t">
                   <td className="px-3 py-2">{entry.invoice}</td>
                   <td className="px-3 py-2">{entry.customerName}</td>
@@ -296,18 +277,6 @@ export default function InventoryReport() {
             )}
           </tbody>
         </table>
-
-        <div className="mt-4 flex justify-between items-center">
-          <div className="text-sm">
-            Show{" "}
-            <select className="border rounded px-2 py-1">
-              <option value="10">10</option>
-              <option value="25">25</option>
-              <option value="50">50</option>
-            </select>{" "}
-            entries
-          </div>
-        </div>
       </div>
     </div>
   );

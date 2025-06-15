@@ -3,13 +3,13 @@ CREATE TABLE `User` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
     `idNumber` VARCHAR(191) NOT NULL,
     `name` VARCHAR(191) NOT NULL,
-    `designation` VARCHAR(191) NOT NULL,
     `email` VARCHAR(191) NOT NULL,
     `contact` VARCHAR(191) NOT NULL,
     `address` VARCHAR(191) NOT NULL,
     `password` VARCHAR(191) NOT NULL,
     `username` VARCHAR(191) NOT NULL,
     `role` ENUM('ADMIN', 'OWNER', 'EMPLOYEE') NOT NULL,
+    `isDeleted` BOOLEAN NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
 
@@ -25,10 +25,8 @@ CREATE TABLE `Customer` (
     `company` VARCHAR(191) NOT NULL,
     `address` VARCHAR(191) NOT NULL,
     `contact` VARCHAR(191) NOT NULL,
-    `totalSales` DOUBLE NOT NULL,
-    `totalPaid` DOUBLE NOT NULL,
-    `totalDue` DOUBLE NOT NULL,
     `updatedOn` DATETIME(3) NOT NULL,
+    `isDeleted` BOOLEAN NULL,
 
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -41,11 +39,24 @@ CREATE TABLE `Product` (
     `size` VARCHAR(191) NOT NULL,
     `category` VARCHAR(191) NOT NULL,
     `quantity` INTEGER NOT NULL,
-    `remainingStock` INTEGER NOT NULL,
+    `remainingStock` INTEGER NULL,
     `buyingPrice` DOUBLE NOT NULL,
     `sellingPrice` DOUBLE NOT NULL,
-    `source` VARCHAR(191) NOT NULL,
-    `isLowStock` BOOLEAN NOT NULL DEFAULT false,
+    `source` VARCHAR(191) NULL,
+    `isDeleted` BOOLEAN NULL,
+    `isLowStock` BOOLEAN NULL DEFAULT false,
+
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `ProductHistory` (
+    `id` INTEGER NOT NULL AUTO_INCREMENT,
+    `quantity` INTEGER NOT NULL,
+    `originalStockAdded` INTEGER NOT NULL,
+    `addedBy` VARCHAR(191) NOT NULL,
+    `updatedOn` DATETIME(3) NOT NULL,
+    `productId` VARCHAR(191) NOT NULL,
 
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -60,8 +71,10 @@ CREATE TABLE `Sale` (
     `paid` DOUBLE NOT NULL,
     `due` DOUBLE NOT NULL,
     `status` ENUM('Pending', 'Completed', 'Partial') NOT NULL,
-    `paymentType` ENUM('Cash', 'Gcash', 'BankTransfer') NOT NULL,
+    `paymentType` VARCHAR(191) NULL,
+    `referenceNumber` VARCHAR(191) NULL,
     `updatedOn` DATETIME(3) NOT NULL,
+    `isDeleted` BOOLEAN NULL,
 
     UNIQUE INDEX `Sale_invoice_key`(`invoice`),
     PRIMARY KEY (`id`)
@@ -78,6 +91,9 @@ CREATE TABLE `SaleItem` (
 
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- AddForeignKey
+ALTER TABLE `ProductHistory` ADD CONSTRAINT `ProductHistory_productId_fkey` FOREIGN KEY (`productId`) REFERENCES `Product`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `Sale` ADD CONSTRAINT `Sale_customerId_fkey` FOREIGN KEY (`customerId`) REFERENCES `Customer`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;

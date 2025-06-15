@@ -53,6 +53,17 @@ model Product {
   isDeleted Boolean?
   isLowStock     Boolean?   @default(false)
   saleItems      SaleItem[]
+  productHistory      ProductHistory[]
+}
+
+model ProductHistory {
+    id          Int       @id @default(autoincrement())
+    quantity           Int
+    originalStockAdded           Int
+    addedBy   String
+    updatedOn    DateTime
+    productId String
+    products    Product  @relation(fields: [productId], references: [id])
 }
 
 model Sale {
@@ -65,7 +76,8 @@ model Sale {
   paid         Float
   due          Float
   status       SaleStatus
-  paymentType  PaymentType
+  paymentType  String?
+  referenceNumber String?
   updatedOn    DateTime
   isDeleted Boolean?
   saleItems    SaleItem[]
