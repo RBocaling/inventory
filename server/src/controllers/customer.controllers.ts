@@ -22,6 +22,9 @@ export const getAllCustomers = async (_: Request, res: Response) => {
       include: {
         sales: true,
       },
+      orderBy: {
+        id: "desc",
+      },
     });
     return res.status(200).json(result);
   } catch (error) {
@@ -36,6 +39,9 @@ export const getCustomerById = async (req: Request, res: Response) => {
       where: {
         id,
         isDeleted: false,
+      },
+      orderBy: {
+        id: "desc",
       },
     });
     if (!result) return res.status(404).json({ message: "Customer not found" });

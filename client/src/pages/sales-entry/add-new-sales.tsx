@@ -212,7 +212,10 @@ const AddNewSales = () => {
     }
   }, []);
 
-  console.log("customerInfo", customerInfo);
+  console.log(
+    "customerInfo",
+    items?.filter((item) => item?.orderQuantity == "")?.length
+  );
 
   return (
     <div className="w-full p-5 pb-40">
@@ -267,7 +270,7 @@ const AddNewSales = () => {
                 />
               </div>
               <div>
-                <p className="text-sm">Stock</p>
+                <p className="font-bold text-sm text-[#512E2E]">Stock</p>
                 <input
                   readOnly
                   value={item.totalQuantity}
@@ -275,7 +278,7 @@ const AddNewSales = () => {
                 />
               </div>
               <div>
-                <p className="text-sm">Price</p>
+                <p className="font-bold text-sm text-[#512E2E]">Price</p>
                 <input
                   readOnly
                   value={formatPHP(Number(item.price))}
@@ -283,16 +286,27 @@ const AddNewSales = () => {
                 />
               </div>
               <div>
-                <p className="text-sm">Order Qty</p>
+                <p className="font-bold text-sm text-[#512E2E]">Order Qty</p>
                 <input
                   type="number"
                   value={item.orderQuantity}
-                  onChange={(e) => handleOrderQtyChange(index, e)}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (value === "" || Number(value) >= 1) {
+                      handleOrderQtyChange(index, e);
+                    }
+                  }}
                   className="border p-2 rounded bg-white w-full"
                   ref={inputRef}
                   min="1"
                   onKeyDown={(e) => {
-                    if (e.key === "-" || e.key === "e" || e.key == "0") {
+                    if (e.key === "-" || e.key.toLowerCase() === "e") {
+                      e.preventDefault();
+                    }
+                    const input = e.currentTarget;
+                    const currentValue = input.value;
+
+                    if (e.key === "0" && currentValue === "") {
                       e.preventDefault();
                     }
                   }}
@@ -302,7 +316,7 @@ const AddNewSales = () => {
                 )}
               </div>
               <div>
-                <p className="text-sm">Total</p>
+                <p className="font-bold text-sm text-[#512E2E]">Total</p>
                 <input
                   readOnly
                   value={formatPHP(Number(item.totalPrice))}
@@ -339,7 +353,7 @@ const AddNewSales = () => {
         {/* Summary */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-[#EFEFEF] p-3">
           <div className="w-full">
-            <p className="text-sm">Subtotal</p>
+            <p className="font-bold text-sm text-[#512E2E]">Subtotal</p>
             <input
               readOnly
               value={formatPHP(subtotal)}
@@ -347,7 +361,7 @@ const AddNewSales = () => {
             />
           </div>
           <div className="w-full">
-            <p className="text-sm">Previous Due</p>
+            <p className="font-bold text-sm text-[#512E2E]">Previous Due</p>
             <input
               type="number"
               name="prevDue"
@@ -363,7 +377,7 @@ const AddNewSales = () => {
             />
           </div>
           <div className="w-full">
-            <p className="text-sm">Net Total</p>
+            <p className="font-bold text-sm text-[#512E2E]">Net Total</p>
             <input
               readOnly
               value={formatPHP(netTotal)}
@@ -371,7 +385,7 @@ const AddNewSales = () => {
             />
           </div>
           <div className="w-full">
-            <p className="text-sm">Paid Amount</p>
+            <p className="font-bold text-sm text-[#512E2E]">Paid Amount</p>
             <input
               type="number"
               name="paidAmount"
@@ -387,7 +401,7 @@ const AddNewSales = () => {
             />
           </div>
           <div className="w-full">
-            <p className="text-sm">Due Amount</p>
+            <p className="font-bold text-sm text-[#512E2E]">Due Amount</p>
             <input
               readOnly
               value={formatPHP(dueAmount)}
@@ -395,7 +409,7 @@ const AddNewSales = () => {
             />
           </div>
           <div className="w-full">
-            <p className="text-sm">Payment Method</p>
+            <p className="font-bold text-sm text-[#512E2E]">Payment Method</p>
             <select
               name="paymentMethod"
               value={customerInfo.paymentMethod}
@@ -408,7 +422,7 @@ const AddNewSales = () => {
             </select>
           </div>
           <div className="w-full">
-            <p className="text-sm">Reference Number</p>
+            <p className="font-bold text-sm text-[#512E2E]">Reference Number</p>
             <input
               name="referenceNumber"
               value={customerInfo.referenceNumber ?? ""}
@@ -420,13 +434,24 @@ const AddNewSales = () => {
 
         {/* Action Buttons */}
         <div className="flex justify-center space-x-4 mt-6">
-          <button
-            type="button"
-            onClick={handleSubmit}
-            className="bg-[#6b4b47] text-white px-6 py-2 rounded hover:bg-[#593b37]"
-          >
-            Add Sale
-          </button>
+          <div>
+            <button
+              disabled={
+                items?.filter((item) => item?.orderQuantity == "")?.length > 0
+              }
+              type="button"
+              onClick={handleSubmit}
+              className="bg-[#6b4b47] text-white px-6 py-2 rounded hover:bg-[#593b37]"
+            >
+              Add Sale
+            </button>
+            {items?.filter((item) => item?.orderQuantity == "")?.length > 0 && (
+              <p className="text-red-500 text-sm font-medium">
+                Please Input empty order Qty.
+              </p>
+            )}
+          </div>
+
           <Link
             to="/sales-entry"
             className="bg-[#F6726C] text-white px-12 py-2 rounded hover:bg-red-600"

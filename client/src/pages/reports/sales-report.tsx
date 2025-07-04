@@ -59,15 +59,25 @@ export default function SalesReport() {
     });
   }, [sales, products, customers]);
 
-  const uniqueProducts = Array.from(
-    new Set(salesWithNames.flatMap((s: any) => s.productNames.split(", ")))
-  );
-  const uniqueCustomers = Array.from(
-    new Set(salesWithNames.map((s: any) => s.customerName))
-  );
+  const uniqueProducts = useMemo(() => {
+    const all = Array.from(
+      new Set(salesWithNames.flatMap((s: any) => s.productNames.split(", ")))
+    );
+    return [
+      { value: "All", label: "--All Products--" },
+      ...all.map((p) => ({ value: p, label: p })),
+    ];
+  }, [salesWithNames]);
 
-  const productOptions = uniqueProducts.map((p) => ({ value: p, label: p }));
-  const customerOptions = uniqueCustomers.map((c) => ({ value: c, label: c }));
+  const uniqueCustomers = useMemo(() => {
+    const all = Array.from(
+      new Set(salesWithNames.map((s: any) => s.customerName))
+    ).sort();
+    return [
+      { value: "", label: "--All Customers--" },
+      ...all.map((c) => ({ value: c, label: c })),
+    ];
+  }, [salesWithNames]);
 
   const filtered = useMemo(() => {
     return salesWithNames.filter((s: any) => {
@@ -80,10 +90,11 @@ export default function SalesReport() {
 
       if (
         filters.product.length > 0 &&
+        !filters.product.includes("All") &&
         !filters.product.some((p) => s.productNames.includes(p))
       )
         return false;
-      
+
       if (filters.customer && s.customerName !== filters.customer) return false;
       if (filters.status && s.status !== filters.status) return false;
 
@@ -140,15 +151,25 @@ export default function SalesReport() {
           </label>
           <Select
             isMulti
-            options={productOptions}
-            value={productOptions.filter((opt: any) =>
+            options={uniqueProducts}
+            value={uniqueProducts.filter((opt: any) =>
               filters.product.includes(opt.value)
             )}
-            onChange={(selected) =>
+            onChange={(selectedOptions) => {
+              const selected = selectedOptions || [];
+
+              // Handle exclusive "All" logic
+              const hasAll = selected.some((s) => s.value === "All");
+
               setFilters((prev: any) => ({
                 ...prev,
-                product: selected.map((s) => s.value),
-              }))
+                product: hasAll
+                  ? ["All"]
+                  : selected.map((s) => s.value).filter((v) => v !== "All"),
+              }));
+            }}
+            isOptionDisabled={(option) =>
+              filters.product.includes("All") && option.value !== "All"
             }
           />
         </div>
@@ -157,11 +178,11 @@ export default function SalesReport() {
             Customer
           </label>
           <Select
-            options={[{ value: "", label: "--All--" }, ...customerOptions]}
+            options={uniqueCustomers}
             value={
-              customerOptions.find((opt) => opt.value === filters.customer) || {
+              uniqueCustomers.find((opt) => opt.value === filters.customer) || {
                 value: "",
-                label: "--All--",
+                label: "--All Customers--",
               }
             }
             onChange={(selected) =>
@@ -197,7 +218,7 @@ export default function SalesReport() {
         <div className="flex items-center justify-between mb-3">
           <input
             type="text"
-            placeholder="Search"
+            placeholder="Search by customer"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="border p-2 rounded w-1/3"

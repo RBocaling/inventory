@@ -66,11 +66,21 @@ export default function InventoryReport() {
     });
   }, [sales, products, customers]);
 
-  const uniqueProducts = Array.from(new Set(products.map((p: any) => p.name)));
+  const uniqueProducts = useMemo(() => {
+    const all = Array.from(new Set(products.map((p: any) => p.name)));
+    return [
+      { value: "All", label: "--All Products--" },
+      ...all.map((p) => ({ value: p, label: p })),
+    ];
+  }, [products]);
 
-  const uniqueCustomers = Array.from(
-    new Set(customers.map((c: any) => c.name))
-  );
+  const uniqueCustomers = useMemo(() => {
+    const all = Array.from(new Set(customers.map((c: any) => c.name))).sort();
+    return [
+      { value: "", label: "--All Customers--" },
+      ...all.map((c) => ({ value: c, label: c })),
+    ];
+  }, [customers]);
 
   const filtered = useMemo(() => {
     return inventoryEntries.filter((entry: any) => {
@@ -153,36 +163,42 @@ export default function InventoryReport() {
           <label className="text-sm font-bold block">Product (Multiple)</label>
           <Select
             isMulti
-            options={uniqueProducts.map((p) => ({ label: p, value: p })) as any}
-            value={filters.products.map((p) => ({ label: p, value: p }))}
-            onChange={(selected) =>
-              setFilters((prev) => ({
+            options={uniqueProducts}
+            value={uniqueProducts.filter((opt: any) =>
+              filters.products.includes(opt.value)
+            )}
+            onChange={(selectedOptions) => {
+              const selected = selectedOptions || [];
+              const hasAll = selected.some((s) => s.value === "All");
+              setFilters((prev: any) => ({
                 ...prev,
-                products: selected.map((s) => s.value),
-              }))
+                products: hasAll
+                  ? ["All"]
+                  : selected.map((s) => s.value).filter((v) => v !== "All"),
+              }));
+            }}
+            isOptionDisabled={(option) =>
+              filters.products.includes("All") && option.value !== "All"
             }
-            className="bg-white"
           />
         </div>
         <div>
           <label className="text-sm font-bold block">Customer</label>
           <Select
-            isClearable
-            options={
-              uniqueCustomers.map((c) => ({ label: c, value: c })) as any
-            }
+            options={uniqueCustomers}
             value={
-              filters.customer
-                ? { label: filters.customer, value: filters.customer }
-                : null
+              uniqueCustomers.find((opt) => opt.value === filters.customer) || {
+                value: "",
+                label: "--All Customers--",
+              }
             }
             onChange={(selected) =>
-              setFilters((prev) => ({
+              setFilters((prev: any) => ({
                 ...prev,
                 customer: selected?.value || "",
               }))
             }
-            className="bg-white"
+            isClearable
           />
         </div>
       </div>

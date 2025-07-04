@@ -1,39 +1,42 @@
 import { Request, Response } from "express";
 import prisma from "../config/prisma";
 
-export const createSale = async (req: Request, res: Response) => {
-  try {
-    const data = req.body;
-    const result = await prisma.sale.create({
-      data: {
-        ...data,
-        isDeleted: false,
-      },
-      include: { saleItems: true },
-    });
-    res.status(201).json(result);
-  } catch (error) {
-    res.status(500).json({ message: "Error creating Sale", error });
-  }
-};
+  export const createSale = async (req: Request, res: Response) => {
+    try {
+      const data = req.body;
+      const result = await prisma.sale.create({
+        data: {
+          ...data,
+          isDeleted: false,
+        },
+        include: { saleItems: true },
+      });
+      res.status(201).json(result);
+    } catch (error) {
+      res.status(500).json({ message: "Error creating Sale", error });
+    }
+  };
 
-export const getAllSales = async (_: Request, res: Response) => {
-  try {
-    const result = await prisma.sale.findMany({
-      where: { isDeleted: false },
-      include: { customer: true, saleItems: true },
-    });
+  export const getAllSales = async (_: Request, res: Response) => {
+    try {
+      const result = await prisma.sale.findMany({
+        where: { isDeleted: false },
+        include: { customer: true, saleItems: true },
+        orderBy: {
+          id: "desc",
+        },
+      });
 
-    res.status(200).json(
-      result.map((item: any) => ({
-        ...item,
-        customer: item.customer?.name,
-      }))
-    );
-  } catch (error) {
-    res.status(500).json({ message: "Error fetching Sales", error });
-  }
-};
+      res.status(200).json(
+        result.map((item: any) => ({
+          ...item,
+          customer: item.customer?.name,
+        }))
+      );
+    } catch (error) {
+      res.status(500).json({ message: "Error fetching Sales", error });
+    }
+  };
 
 export const getSaleById = async (req: Request, res: Response) => {
   try {

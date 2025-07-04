@@ -15,6 +15,9 @@ export const getAllSaleItems = async (_: Request, res: Response) => {
   try {
     const result = await prisma.saleItem.findMany({
       include: { product: true, sale: true },
+      orderBy: {
+        id: "desc",
+      },
     });
     res.status(200).json(result);
   } catch (error) {

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Select from "react-select";
 import { FaTimes } from "react-icons/fa";
 import { Link, useNavigate, useParams } from "react-router-dom";
@@ -9,6 +9,7 @@ import { updateSaleApi } from "@/api/saleApi";
 import { useGetCustomerList } from "@/hooks/useGetCustomer";
 import { useGetProductList } from "@/hooks/useGetProduct";
 import { useGetSaleById } from "@/hooks/useGetSale";
+import { formatPHP } from "@/lib/constants";
 
 type SalesItem = {
   product: string;
@@ -214,7 +215,15 @@ const UpdateSales = () => {
     });
   };
 
-  console.log("items", products);
+  const inputRef = useRef(null);
+  useEffect(() => {
+    (inputRef.current as any)?.focus();
+  }, []);
+
+  console.log(
+    "ddd",
+    items?.filter((item) => item?.orderQuantity == "")?.length
+  );
 
   return (
     <div className="w-full p-5 pb-40">
@@ -283,20 +292,37 @@ const UpdateSales = () => {
               <p className="font-bold text-sm text-[#512E2E]">Price</p>
               <input
                 readOnly
-                value={item.price}
+                value={formatPHP(Number(item.price))}
                 className="border p-2 rounded bg-gray-100"
                 placeholder="Price"
               />
             </div>
             <div className="w-full flex flex-col">
-              <p className="font-bold text-sm text-[#512E2E]">Quantity</p>
+              <p className="font-bold text-sm text-[#512E2E]">Order Qty</p>
 
               <input
                 type="number"
                 value={item.orderQuantity}
-                onChange={(e) => handleOrderQtyChange(index, e)}
-                className="border p-2 rounded bg-white"
-                placeholder="Order Qty"
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (value === "" || Number(value) >= 1) {
+                    handleOrderQtyChange(index, e);
+                  }
+                }}
+                className="border p-2 rounded bg-white w-full"
+                ref={inputRef}
+                min="1"
+                onKeyDown={(e) => {
+                  if (e.key === "-" || e.key.toLowerCase() === "e") {
+                    e.preventDefault();
+                  }
+                  const input = e.currentTarget;
+                  const currentValue = input.value;
+
+                  if (e.key === "0" && currentValue === "") {
+                    e.preventDefault();
+                  }
+                }}
               />
             </div>
             <div className="w-full flex flex-col">
@@ -304,7 +330,7 @@ const UpdateSales = () => {
 
               <input
                 readOnly
-                value={item.totalPrice}
+                value={formatPHP(Number(item.totalPrice))}
                 className="border p-2 rounded bg-gray-100"
                 placeholder="Total"
               />
@@ -327,6 +353,11 @@ const UpdateSales = () => {
           <button
             type="button"
             onClick={addNewItem}
+            disabled={
+              items[items.length - 1]?.orderQuantity == "0" ||
+              items[items.length - 1]?.orderQuantity == null ||
+              items[items.length - 1]?.orderQuantity == ""
+            }
             className="bg-[#6b4b47] text-white px-6 py-2 rounded hover:bg-[#593b37]"
           >
             Add New Item
@@ -340,7 +371,7 @@ const UpdateSales = () => {
           <p className="font-bold text-sm text-[#512E2E]">Subtotal</p>
           <input
             readOnly
-            value={subtotal.toFixed(2)}
+            value={formatPHP(Number(subtotal))}
             className="border p-2 rounded bg-gray-100"
             placeholder="Subtotal"
           />
@@ -359,7 +390,7 @@ const UpdateSales = () => {
           <p className="font-bold text-sm text-[#512E2E]">Net Total</p>
           <input
             readOnly
-            value={netTotal.toFixed(2)}
+            value={formatPHP(Number(netTotal))}
             className="border p-2 rounded bg-gray-100"
             placeholder="Net Total"
           />
@@ -378,7 +409,7 @@ const UpdateSales = () => {
           <p className="font-bold text-sm text-[#512E2E]">Due Amount</p>
           <input
             readOnly
-            value={dueAmount.toFixed(2)}
+            value={formatPHP(Number(dueAmount))}
             className="border p-2 rounded bg-gray-100"
             placeholder="Due Amount"
           />
@@ -397,7 +428,7 @@ const UpdateSales = () => {
           </select>
         </div>
         <div className="w-full">
-          <p className="text-sm">Reference Number</p>
+          <p className="font-bold text-sm text-[#512E2E]">Reference Number</p>
           <input
             name="referenceNumber"
             value={customerInfo.referenceNumber ?? ""}
@@ -408,12 +439,22 @@ const UpdateSales = () => {
       </div>
 
       <div className="flex justify-center space-x-4 mt-6">
-        <button
-          onClick={handleSubmit}
-          className="bg-[#6b4b47] text-white px-6 py-2 rounded hover:bg-[#593b37]"
-        >
-          Update Sale
-        </button>
+        <div>
+          <button
+            disabled={
+              items?.filter((item) => item?.orderQuantity == "")?.length > 0
+            }
+            onClick={handleSubmit}
+            className="bg-[#6b4b47] text-white px-6 py-2 rounded hover:bg-[#593b37]"
+          >
+            Update Sale
+          </button>
+          {items?.filter((item) => item?.orderQuantity == "")?.length > 0 && (
+            <p className="text-red-500 text-sm font-medium">
+              Please Input empty order Qty.
+            </p>
+          )}
+        </div>
         <Link
           to="/sales-entry"
           className="bg-[#F6726C] text-white px-12 py-2 rounded hover:bg-red-600"

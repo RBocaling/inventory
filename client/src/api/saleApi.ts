@@ -19,6 +19,16 @@ export const updateSaleApi = async ({id,data}: any) => {
     throw new Error(error as any);
   }
 };
+export const updateSaleApi2 = async ({ id, data }: any) => {
+  console.log("api sale", id);
+
+  try {
+    const response = await api.put(`/sale/update/${id}`, data);
+    return response.data;
+  } catch (error) {
+    throw new Error(error as any);
+  }
+};
 
 export const getAllSaleApi = async () => {
   try {

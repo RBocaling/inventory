@@ -11,9 +11,9 @@ const ProfitReport = () => {
   const { data: customers = [] } = useGetCustomerList();
   const { data: products = [] } = useGetProductList();
   const { data } = useGetInfo();
-  if (data?.role === "EMPLOYEE") {
-    return null;
-  }
+
+  if (data?.role === "EMPLOYEE") return null;
+
   const [filters, setFilters] = useState({
     startDate: "",
     endDate: "",
@@ -26,10 +26,28 @@ const ProfitReport = () => {
     setFilters((prev) => ({ ...prev, [name]: value }));
   };
 
+  const productOptions = useMemo(() => {
+    const base = products.map((p: any) => ({
+      label: `${p.name} (${p.id})`,
+      value: p.id,
+    }));
+    return [{ label: "--All Products--", value: "All" }, ...base];
+  }, [products]);
+
+  const customerOptions = useMemo(() => {
+    const base = customers
+      .map((c: any) => ({ label: c.name, value: c.id.toString() }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+    return [{ label: "--All Customers--", value: "" }, ...base];
+  }, [customers]);
+
   const handleProductChange = (selected: any) => {
+    const selectedValues = selected ? selected.map((s: any) => s.value) : [];
+    const hasAll = selectedValues.includes("All");
+
     setFilters((prev) => ({
       ...prev,
-      products: selected ? selected.map((s: any) => s.value) : [],
+      products: hasAll ? ["All"] : selectedValues.filter((v) => v !== "All"),
     }));
   };
 
@@ -55,6 +73,7 @@ const ProfitReport = () => {
 
       const matchesProduct =
         filters.products.length === 0 ||
+        filters.products.includes("All") ||
         sale.saleItems?.some((item: any) =>
           filters.products.includes(item.productId)
         );
@@ -112,15 +131,14 @@ const ProfitReport = () => {
           <Select
             isMulti
             isClearable
-            options={products.map((p: any) => ({
-              label: `${p.name} (${p.id})`,
-              value: p.id,
-            }))}
-            value={filters.products.map((id) => {
-              const prod = products.find((p: any) => p.id === id);
-              return { label: `${prod?.name} (${id})`, value: id };
-            })}
+            options={productOptions}
+            value={productOptions.filter((opt) =>
+              filters.products.includes(opt.value)
+            )}
             onChange={handleProductChange}
+            isOptionDisabled={(option) =>
+              filters.products.includes("All") && option.value !== "All"
+            }
             className="bg-white"
           />
         </div>
@@ -129,20 +147,11 @@ const ProfitReport = () => {
           <label className="text-sm font-bold text-[#512E2E]">Customer</label>
           <Select
             isClearable
-            options={customers.map((c: any) => ({
-              label: c.name,
-              value: c.id.toString(),
-            }))}
+            options={customerOptions}
             value={
-              filters.customerId
-                ? {
-                    label:
-                      customers.find(
-                        (c: any) => c.id.toString() === filters.customerId
-                      )?.name || "",
-                    value: filters.customerId,
-                  }
-                : null
+              customerOptions.find(
+                (opt) => opt.value === filters.customerId
+              ) || { value: "", label: "--All Customers--" }
             }
             onChange={handleCustomerChange}
             className="bg-white"

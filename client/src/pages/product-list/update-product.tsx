@@ -2,7 +2,7 @@ import Title from "@/components/title/title";
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { products } from "./product-data";
-import { useGetProductByID } from "@/hooks/useGetProduct";
+import { useGetProductByID, useGetProductList } from "@/hooks/useGetProduct";
 import { useMutation } from "@tanstack/react-query";
 import { updateProductApi } from "@/api/productApi";
 import Swal from "sweetalert2";
@@ -11,6 +11,7 @@ const UpdateProduct = () => {
   const { id } = useParams();
   if (!id) return null;
   const { data: product } = useGetProductByID(id);
+  const { data: productList } = useGetProductList();
   const navigate = useNavigate();
 
   const [form, setForm] = useState({
@@ -41,6 +42,16 @@ const UpdateProduct = () => {
     }
   }, [product]);
 
+  const isExistName = productList?.some(
+    (item: any) => item.name === form.name && item.id !== form.id
+  );
+
+  const isExistID = productList?.some(
+    (item: any) => item.id === form.id && item.id !== product?.id
+  );
+
+  console.log("ddd", { isExistID, isExistName });
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
@@ -49,7 +60,6 @@ const UpdateProduct = () => {
   const updateProductMutate = useMutation({
     mutationFn: updateProductApi,
     onSuccess: () => {
-      
       Swal.fire({
         icon: "success",
         title: "Product Updated",
@@ -137,6 +147,9 @@ const UpdateProduct = () => {
               className="w-full border border-gray-400 bg-white p-2 rounded"
               required
             />
+            {isExistName && (
+              <p className="text-sm text-red-500 font-medium">{`Product Name is already exist`}</p>
+            )}
           </div>
           <div>
             <label className="block text-sm font-bold text-[#512E2E]">
@@ -214,6 +227,7 @@ const UpdateProduct = () => {
 
         <div className="flex justify-end space-x-4 mt-6">
           <button
+            disabled={isExistName}
             onClick={handleSubmit}
             className="bg-[#6b4b47] text-white px-6 py-2 rounded hover:bg-[#593b37]"
           >

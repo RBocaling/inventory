@@ -34,6 +34,9 @@ export const getAllProducts = async (_: Request, res: Response) => {
     const products = await prisma.product.findMany({
       where: { isDeleted: false },
       include: { saleItems: true, productHistory: true },
+      orderBy: {
+        id: "desc",
+      },
     });
 
     const updatedProducts = products.map((product) => {

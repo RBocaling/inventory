@@ -4,9 +4,11 @@ import { Link, useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 import Title from "@/components/title/title";
 import { addProductApi } from "@/api/productApi";
+import { useGetProductList } from "@/hooks/useGetProduct";
 
 const AddNewProduct = () => {
   const navigate = useNavigate();
+  const { data: product } = useGetProductList();
 
   const [form, setForm] = useState({
     id: "",
@@ -19,6 +21,13 @@ const AddNewProduct = () => {
     sellingPrice: "",
     source: "",
   });
+
+  const isExistName =
+    product?.filter((item: any) => item.name == form.name)?.length > 0;
+  const isExistID =
+    product?.filter((item: any) => item.id == form.id)?.length > 0;
+
+  console.log("product", { isExistID, isExistName, form, product });
 
   const addProductMutate = useMutation({
     mutationFn: addProductApi,
@@ -71,6 +80,7 @@ const AddNewProduct = () => {
             value={form.id}
             onChange={handleChange}
             required
+            isError={isExistID}
           />
           <Field
             label="Product Name"
@@ -78,6 +88,7 @@ const AddNewProduct = () => {
             value={form.name}
             onChange={handleChange}
             required
+            isError={isExistName}
           />
           <Field
             label="Brand"
@@ -140,6 +151,7 @@ const AddNewProduct = () => {
 
         <div className="flex justify-end space-x-4 mt-6">
           <button
+            disabled={isExistID || isExistName}
             onClick={handleSubmit}
             className="bg-[#6b4b47] text-white px-6 py-2 rounded hover:bg-[#593b37]"
           >
@@ -159,6 +171,7 @@ const AddNewProduct = () => {
 
 const Field = ({
   label,
+  isError,
   name,
   value,
   onChange,
@@ -178,6 +191,9 @@ const Field = ({
       placeholder={required ? "(Required)" : "(Optional)"}
       className="w-full border p-2 rounded border-gray-400 bg-white"
     />
+    {isError && (
+      <p className="text-sm text-red-500 font-medium">{`${label} is already exist`}</p>
+    )}
   </div>
 );
 
