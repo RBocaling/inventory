@@ -17,6 +17,8 @@ const SalesEntryList = () => {
   const { data: salesData } = useGetSaleList();
   const queryClient = useQueryClient();
 
+  console.log("salesData", salesData);
+
   const mutation = useMutation({
     mutationFn: updateSaleApi,
     onSuccess: () => {
@@ -71,6 +73,7 @@ const SalesEntryList = () => {
     const term = searchTerm?.toLowerCase();
     return (
       entry?.invoice?.toString().includes(term) ||
+      entry?.customer?.toString().includes(term) ||
       entry?.status?.toLowerCase().includes(term) ||
       entry?.paymentType?.toLowerCase().includes(term)
     );

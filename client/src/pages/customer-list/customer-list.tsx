@@ -23,12 +23,9 @@ const CustomerList = () => {
     onSuccess: () => {
       Swal.fire({
         title: "Deleted!",
-        text: "Your file has been deleted.",
+        text: "Customer has been deleted.",
         icon: "success",
       }).then(() => {
-        queryClient.invalidateQueries({
-          queryKey: ["get-Customer-lis-by-idt"],
-        });
         queryClient.invalidateQueries({ queryKey: ["get-Customer-list"] });
       });
     },
@@ -36,7 +33,7 @@ const CustomerList = () => {
       Swal.fire({
         icon: "error",
         title: "Failed",
-        text: "Could not update customer. Please check the form.",
+        text: "Could not update customer. Please try again.",
       });
     },
   });
@@ -53,7 +50,7 @@ const CustomerList = () => {
     }).then((result) => {
       if (result.isConfirmed) {
         updateCustomerMutate.mutate({
-          id: Number(customerId),
+          id: customerId,
           isDeleted: true,
         });
       }
@@ -70,16 +67,17 @@ const CustomerList = () => {
 
   const filteredCustomers = customers
     ?.map((customer: any) => {
-      const totalSales = customer?.sales?.reduce(
-        (sum: number, s: any) => sum + s.netTotal,
+      const sales = (customer.sales || []).filter((s: any) => !s.isDeleted);
+      const totalSales = sales.reduce(
+        (sum: number, s: any) => sum + (s.netTotal || 0),
         0
       );
-      const totalPaid = customer?.sales?.reduce(
-        (sum: number, s: any) => sum + s.paid,
+      const totalPaid = sales.reduce(
+        (sum: number, s: any) => sum + (s.paid || 0),
         0
       );
-      const totalDue = customer?.sales?.reduce(
-        (sum: number, s: any) => sum + s.due,
+      const totalDue = sales.reduce(
+        (sum: number, s: any) => sum + (s.due || 0),
         0
       );
       return {
@@ -92,10 +90,10 @@ const CustomerList = () => {
     .filter((c: any) => {
       const term = searchTerm.toLowerCase();
       return (
-        c?.name.toLowerCase().includes(term) ||
-        c?.company.toLowerCase().includes(term) ||
-        c?.address.toLowerCase().includes(term) ||
-        c?.contact.includes(term)
+        (c?.name?.toLowerCase?.().includes(term) ?? false) ||
+        (c?.company?.toLowerCase?.().includes(term) ?? false) ||
+        (c?.address?.toLowerCase?.().includes(term) ?? false) ||
+        (c?.contact?.toLowerCase?.().includes(term) ?? false)
       );
     });
 
@@ -216,27 +214,27 @@ const CustomerList = () => {
                       <td className="text-base px-3 py-2">{c.address}</td>
                       <td className="text-base px-3 py-2">{c.contact}</td>
                       <td className="text-base px-3 py-2">
-                        {formatPHP(Number(c?.totalSales?.toFixed(2)))}
+                        {formatPHP(Number(c.totalSales.toFixed(2)))}
                       </td>
                       <td className="text-base px-3 py-2">
-                        {formatPHP(Number(c?.totalPaid?.toFixed(2)))}
+                        {formatPHP(Number(c.totalPaid.toFixed(2)))}
                       </td>
                       <td className="text-base px-3 py-2">
-                        Php {formatPHP(Number(c?.totalDue?.toFixed(2)))}
+                        {formatPHP(Number(c.totalDue.toFixed(2)))}
                       </td>
                       <td className="text-base px-3 py-2">
-                        {new Date(c?.updatedOn).toLocaleDateString()}
+                        {new Date(c.updatedOn).toLocaleDateString()}
                       </td>
                       <td className="px-3 py-2 flex items-center space-x-4">
                         <Link
-                          to={`/customer-list/update-customer/${c?.id}`}
+                          to={`/customer-list/update-customer/${c.id}`}
                           className="text-blue-600 hover:text-blue-800"
                         >
                           <PiNotePencilBold size={20} />
                         </Link>
                         <button
                           className="text-red-600 hover:text-red-800"
-                          onClick={() => handleDelete(c?.id)}
+                          onClick={() => handleDelete(c.id)}
                         >
                           <FaTrashCan size={20} />
                         </button>

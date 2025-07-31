@@ -86,11 +86,39 @@ const ProfitReport = () => {
     (sum: number, s: any) => sum + (s.netTotal || 0),
     0
   );
+
   const totalPaid = filteredSales.reduce(
     (sum: number, s: any) => sum + (s.paid || 0),
     0
   );
+
   const totalDue = totalSale - totalPaid;
+
+  const totalProfit = useMemo(() => {
+    return filteredSales.reduce((saleSum: number, sale: any) => {
+      const itemProfits = sale.saleItems?.reduce(
+        (itemSum: number, item: any) => {
+          // Apply product filter
+          if (
+            filters.products.length &&
+            !filters.products.includes("All") &&
+            !filters.products.includes(item.productId)
+          ) {
+            return itemSum;
+          }
+
+          const product = products.find((p: any) => p.id === item.productId);
+          if (!product) return itemSum;
+
+          const profit =
+            (product.sellingPrice - product.buyingPrice) * item.quantity;
+          return itemSum + profit;
+        },
+        0
+      );
+      return saleSum + (itemProfits || 0);
+    }, 0);
+  }, [filteredSales, products, filters.products]);
 
   return (
     <div className="w-full p-5 pb-40">
@@ -180,6 +208,15 @@ const ProfitReport = () => {
           <span className="text-black">
             Php{" "}
             {totalDue.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+          </span>
+        </p>
+        <p>
+          Total Profit:{" "}
+          <span className="text-black">
+            Php{" "}
+            {totalProfit.toLocaleString(undefined, {
+              minimumFractionDigits: 2,
+            })}
           </span>
         </p>
       </div>

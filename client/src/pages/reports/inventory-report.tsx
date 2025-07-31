@@ -12,24 +12,21 @@ export default function InventoryReport() {
   const { data: products = [] } = useGetProductList();
   const { data: customers = [] } = useGetCustomerList();
   const { data } = useGetInfo();
-  if (data?.role === "EMPLOYEE") {
-    return null;
-  }
+
+  if (data?.role === "EMPLOYEE") return null;
+
   const [filters, setFilters] = useState({
     startDate: "",
     endDate: "",
     products: [] as string[],
     customer: "",
   });
-  const [searchTerm, setSearchTerm] = useState("");
 
+  const [searchTerm, setSearchTerm] = useState("");
   const [sortConfig, setSortConfig] = useState<{
     key: string;
     direction: "asc" | "desc";
-  }>({
-    key: "invoice",
-    direction: "asc",
-  });
+  }>({ key: "invoice", direction: "asc" });
 
   const handleSort = (key: string) => {
     setSortConfig((prev) => ({
@@ -55,13 +52,20 @@ export default function InventoryReport() {
       return {
         invoice: s.invoice.toString(),
         customerName: cust?.name || "Unknown",
-        orderDate: new Date(s.orderDate).toLocaleDateString(),
+        orderDate: new Date(s.orderDate),
         itemsSold: s.saleItems.reduce(
           (sum: number, i: any) => sum + i.quantity,
           0
         ),
         itemBreakdown: breakdown,
-        updatedOn: new Date(s.updatedOn).toLocaleDateString(),
+        updatedOn: new Date(s.updatedOn),
+        rawItems: s.saleItems.map((i: any) => {
+          const prod = products.find((p: any) => p.id === i.productId);
+          return {
+            name: prod?.name || i.productId,
+            quantity: i.quantity,
+          };
+        }),
       };
     });
   }, [sales, products, customers]);
@@ -84,7 +88,7 @@ export default function InventoryReport() {
 
   const filtered = useMemo(() => {
     return inventoryEntries.filter((entry: any) => {
-      const od = new Date(entry.orderDate);
+      const od = entry.orderDate;
       const sd = filters.startDate ? new Date(filters.startDate) : null;
       const ed = filters.endDate ? new Date(filters.endDate) : null;
 
@@ -93,38 +97,64 @@ export default function InventoryReport() {
 
       if (
         filters.products.length > 0 &&
-        !entry.itemBreakdown.some((item: any) =>
+        !filters.products.includes("All") &&
+        !entry.itemBreakdown.some((item: string) =>
           filters.products.some((p) => item.includes(p))
         )
-      )
+      ) {
         return false;
+      }
 
-      if (filters.customer && entry.customerName !== filters.customer)
+      if (filters.customer && entry.customerName !== filters.customer) {
         return false;
+      }
 
       if (
         searchTerm &&
         !entry.customerName.toLowerCase().includes(searchTerm.toLowerCase())
-      )
+      ) {
         return false;
+      }
 
       return true;
     });
   }, [inventoryEntries, filters, searchTerm]);
 
-  const totalItemsSold = filtered.reduce(
-    (sum: any, cur: any) => sum + cur.itemsSold,
-    0
-  );
+  // ✅ Fixed logic for accurate counting of sold items for selected products
+  const totalItemsSold = useMemo(() => {
+    return filtered.reduce((total: number, entry: any) => {
+      return (
+        total +
+        entry.rawItems.reduce((sum: number, item: any) => {
+          if (
+            filters.products.length === 0 ||
+            filters.products.includes("All") ||
+            filters.products.includes(item.name)
+          ) {
+            return sum + item.quantity;
+          }
+          return sum;
+        }, 0)
+      );
+    }, 0);
+  }, [filtered, filters.products]);
+
   const uniqueCustomerCount = new Set(filtered.map((i: any) => i.customerName))
     .size;
-  const totalRemainingStock = products.reduce(
-    (sum: number, p: any) =>
-      filters.products.length === 0 || filters.products.includes(p.name)
-        ? sum + (p.remainingStock || 0)
-        : sum,
-    0
-  );
+
+  const totalRemainingStock = products.reduce((sum: number, p: any) => {
+    return filters.products.length === 0 || filters.products.includes(p.name)
+      ? sum + (p.remainingStock || 0)
+      : sum;
+  }, 0);
+
+  const sorted = [...filtered].sort((a, b) => {
+    const aValue = a[sortConfig.key];
+    const bValue = b[sortConfig.key];
+    if (aValue < bValue) return sortConfig.direction === "asc" ? -1 : 1;
+    if (aValue > bValue) return sortConfig.direction === "asc" ? 1 : -1;
+    return 0;
+  });
 
   return (
     <div className="w-full p-5 pb-40">
@@ -164,7 +194,7 @@ export default function InventoryReport() {
           <Select
             isMulti
             options={uniqueProducts}
-            value={uniqueProducts.filter((opt: any) =>
+            value={uniqueProducts.filter((opt) =>
               filters.products.includes(opt.value)
             )}
             onChange={(selectedOptions) => {
@@ -271,23 +301,27 @@ export default function InventoryReport() {
             </tr>
           </thead>
           <tbody>
-            {filtered.length === 0 ? (
+            {sorted.length === 0 ? (
               <tr>
                 <td colSpan={6} className="text-center py-4 text-gray-500">
                   No records found.
                 </td>
               </tr>
             ) : (
-              filtered.map((entry: any, idx: number) => (
+              sorted.map((entry: any, idx: number) => (
                 <tr key={idx} className="border-t">
                   <td className="px-3 py-2">{entry.invoice}</td>
                   <td className="px-3 py-2">{entry.customerName}</td>
-                  <td className="px-3 py-2">{entry.orderDate}</td>
+                  <td className="px-3 py-2">
+                    {entry.orderDate.toLocaleDateString()}
+                  </td>
                   <td className="px-3 py-2">{entry.itemsSold}</td>
                   <td className="px-3 py-2 whitespace-pre-line">
                     {entry.itemBreakdown.join("\n")}
                   </td>
-                  <td className="px-3 py-2">{entry.updatedOn}</td>
+                  <td className="px-3 py-2">
+                    {entry.updatedOn.toLocaleDateString()}
+                  </td>
                 </tr>
               ))
             )}
